@@ -1,0 +1,20 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    name: Run verification gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure verify script is executable
+        run: chmod +x scripts/verify.sh
+
+      - name: Run verification
+        run: scripts/verify.sh
