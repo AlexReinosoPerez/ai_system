@@ -2,12 +2,13 @@
 Programmer - DDS execution engine with noop actions
 """
 
+import hashlib
 import json
 import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 from node_programmer.execution_report import ExecutionReport
 from node_programmer.external_tools.aider_runner import run_aider
 from shared.logger import setup_logger
@@ -164,6 +165,236 @@ class Programmer:
         logger.info(f"Built prompt ({len(prompt)} chars) for DDS: {dds.get('id')}")
         
         return prompt
+    
+    def _save_execution_report(self, report: ExecutionReport) -> None:
+        """
+        Save execution report to reports.json (append-only)
+        
+        Args:
+            report: ExecutionReport to persist
+        """
+        reports_file = Path(self.REPORTS_FILE)
+        
+        # Load existing reports
+        if reports_file.exists():
+            with open(reports_file, 'r') as f:
+                data = json.load(f)
+                executions = data.get('executions', [])
+        else:
+            executions = []
+        
+        # Append new report
+        executions.append(report.to_dict())
+        
+        # Save back
+        reports_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(reports_file, 'w') as f:
+            json.dump({'executions': executions}, f, indent=2)
+        
+        logger.info(f"Saved execution report for DDS: {report.dds_id}")
+    
+    def _mark_dds_executed(self, dds_id: str, execution_status: str, executed_at: str, notes: str) -> None:
+        """
+        Mark DDS as executed in dds.json
+        
+        Args:
+            dds_id: DDS identifier
+            execution_status: 'success' or 'failed'
+            executed_at: Timestamp of execution
+            notes: Summary of execution result
+        """
+        dds_file = Path(self.DDS_FILE)
+        
+        if not dds_file.exists():
+            logger.warning(f"DDS file not found: {dds_file}")
+            return
+        
+        # Load DDS file
+        with open(dds_file, 'r') as f:
+            data = json.load(f)
+        
+        # Find and update DDS
+        proposals = data.get('proposals', [])
+        for proposal in proposals:
+            if proposal.get('id') == dds_id:
+                proposal['last_execution'] = {
+                    'status': execution_status,
+                    'executed_at': executed_at,
+                    'notes': notes
+                }
+                break
+        
+        # Save back
+        with open(dds_file, 'w') as f:
+            json.dump(data, f, indent=2)
+        
+        logger.info(f"Marked DDS as executed: {dds_id} -> {execution_status}")
+    
+    def _check_already_executed(self, dds_id: str) -> bool:
+        """
+        Check if DDS has already been executed successfully
+        
+        Args:
+            dds_id: DDS identifier
+            
+        Returns:
+            True if DDS already executed successfully
+        """
+        dds_file = Path(self.DDS_FILE)
+        
+        if not dds_file.exists():
+            return False
+        
+        with open(dds_file, 'r') as f:
+            data = json.load(f)
+        
+        proposals = data.get('proposals', [])
+        for proposal in proposals:
+            if proposal.get('id') == dds_id:
+                last_exec = proposal.get('last_execution', {})
+                return last_exec.get('status') == 'success'
+        
+        return False
+    
+    def _build_user_summary(self, report: ExecutionReport, created: List[str], modified: List[str], deleted: List[str], constraints_ok: bool, violations: List[str]) -> str:
+        """
+        Build clear user-facing summary of execution
+        
+        Args:
+            report: Execution report
+            created: Created files
+            modified: Modified files
+            deleted: Deleted files
+            constraints_ok: Whether constraints validated
+            violations: List of constraint violations
+            
+        Returns:
+            Formatted summary string
+        """
+        lines = []
+        lines.append("=" * 60)
+        lines.append(f"DDS Execution Report: {report.dds_id}")
+        lines.append("=" * 60)
+        lines.append(f"Status: {report.status.upper()}")
+        lines.append(f"Executed at: {report.executed_at}")
+        lines.append("")
+        lines.append("Changes Detected:")
+        lines.append(f"  - Created: {len(created)} files")
+        lines.append(f"  - Modified: {len(modified)} files")
+        lines.append(f"  - Deleted: {len(deleted)} files")
+        lines.append("")
+        lines.append(f"Constraints Validation: {'✓ PASSED' if constraints_ok else '✗ FAILED'}")
+        
+        if violations:
+            lines.append("Violations:")
+            for violation in violations:
+                lines.append(f"  - {violation}")
+        
+        lines.append("")
+        lines.append(f"Notes: {report.notes}")
+        lines.append("=" * 60)
+        
+        return "\n".join(lines)
+    
+    def _create_workspace_snapshot(self, workspace_path: Path) -> Dict[str, str]:
+        """
+        Create snapshot of workspace files (path -> hash)
+        
+        Args:
+            workspace_path: Path to workspace directory
+            
+        Returns:
+            Dictionary mapping relative paths to file content hashes
+        """
+        snapshot = {}
+        
+        for file_path in workspace_path.rglob('*'):
+            if file_path.is_file():
+                relative_path = str(file_path.relative_to(workspace_path))
+                
+                try:
+                    with open(file_path, 'rb') as f:
+                        content_hash = hashlib.md5(f.read()).hexdigest()
+                    snapshot[relative_path] = content_hash
+                except Exception as e:
+                    logger.warning(f"Failed to hash file {relative_path}: {e}")
+        
+        logger.info(f"Created snapshot with {len(snapshot)} files")
+        return snapshot
+    
+    def _detect_changes(self, workspace_path: Path, before_snapshot: Dict[str, str]) -> Tuple[List[str], List[str], List[str]]:
+        """
+        Detect file changes by comparing current state with snapshot
+        
+        Args:
+            workspace_path: Path to workspace directory
+            before_snapshot: Snapshot created before execution
+            
+        Returns:
+            Tuple of (created_files, modified_files, deleted_files)
+        """
+        after_snapshot = self._create_workspace_snapshot(workspace_path)
+        
+        created = []
+        modified = []
+        deleted = []
+        
+        # Find created and modified files
+        for path, hash_after in after_snapshot.items():
+            if path not in before_snapshot:
+                created.append(path)
+            elif before_snapshot[path] != hash_after:
+                modified.append(path)
+        
+        # Find deleted files
+        for path in before_snapshot:
+            if path not in after_snapshot:
+                deleted.append(path)
+        
+        logger.info(f"Detected changes: {len(created)} created, {len(modified)} modified, {len(deleted)} deleted")
+        return created, modified, deleted
+    
+    def _validate_constraints(self, dds: dict, created: List[str], modified: List[str]) -> Tuple[bool, List[str]]:
+        """
+        Validate DDS constraints against detected changes
+        
+        Args:
+            dds: DDS proposal dictionary
+            created: List of created file paths
+            modified: List of modified file paths
+            
+        Returns:
+            Tuple of (constraints_ok, violations)
+        """
+        violations = []
+        constraints = dds.get('constraints', {})
+        
+        # Check max_files_changed
+        max_files = constraints.get('max_files_changed', constraints.get('max_files'))
+        if max_files is not None:
+            total_changed = len(created) + len(modified)
+            if total_changed > max_files:
+                violations.append(f"Max files changed exceeded: {total_changed} > {max_files}")
+        
+        # Check no_new_dependencies (heuristic: look for package.json, requirements.txt, etc.)
+        no_deps = constraints.get('no_new_dependencies', False)
+        if no_deps:
+            dependency_files = ['package.json', 'requirements.txt', 'Pipfile', 'pyproject.toml', 'Cargo.toml', 'go.mod']
+            for file in created + modified:
+                if any(dep_file in file for dep_file in dependency_files):
+                    violations.append(f"Dependency file modified: {file}")
+        
+        # Check no_refactor (heuristic: too many files changed suggests refactoring)
+        no_refactor = constraints.get('no_refactor', False)
+        if no_refactor:
+            total_changed = len(created) + len(modified)
+            if total_changed > 3:  # Heuristic: > 3 files suggests refactoring
+                violations.append(f"Possible refactoring detected: {total_changed} files changed")
+        
+        constraints_ok = len(violations) == 0
+        logger.info(f"Constraint validation: {constraints_ok} (violations: {len(violations)})")
+        
+        return constraints_ok, violations
     
     def _validate_dds_v2(self, dds: dict) -> None:
         """
@@ -476,7 +707,7 @@ class Programmer:
     
     def execute_code_change(self, dds_id: str) -> ExecutionReport:
         """
-        Execute code_change action for DDS v2 proposal (PHASE 2: validation only)
+        Execute code_change action for DDS v2 proposal (PHASE 2-8)
         
         Args:
             dds_id: DDS proposal ID to execute
@@ -485,11 +716,28 @@ class Programmer:
             ExecutionReport with validation status
             
         Raises:
-            ProgrammerError: If validation fails
+            ProgrammerError: If validation fails or already executed
         """
         logger.info(f"Executing code_change for DDS: {dds_id}")
         
-        # Check if already executed
+        # PHASE 8: Check if already executed successfully
+        if self._check_already_executed(dds_id):
+            error_msg = f"DDS already executed successfully: {dds_id}"
+            logger.error(error_msg)
+            
+            execution_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            report = ExecutionReport(
+                dds_id=dds_id,
+                action_type='code_change',
+                status='failed',
+                executed_at=execution_time,
+                notes=error_msg
+            )
+            
+            self._save_execution_report(report)
+            raise ProgrammerError(error_msg)
+        
+        # Check if already executed (old method for backwards compatibility)
         if self._is_already_executed(dds_id):
             raise ProgrammerError(f"DDS {dds_id} has already been executed")
         
@@ -590,6 +838,9 @@ class Programmer:
                 prompt_preview = prompt[:200] + "..." if len(prompt) > 200 else prompt
                 logger.debug(f"Prompt preview: {prompt_preview}")
                 
+                # PHASE 7: Create workspace snapshot before execution
+                before_snapshot = self._create_workspace_snapshot(scoped_path)
+                
                 # PHASE 6: Invoke external tool (mock)
                 try:
                     logger.info(f"Invoking Aider for DDS: {dds_id}")
@@ -602,24 +853,56 @@ class Programmer:
                         prompt=prompt
                     )
                     
-                    # If we get here, tool executed successfully (future implementation)
+                    # PHASE 7: Post-execution analysis
+                    logger.info("Analyzing execution results")
+                    
+                    created, modified, deleted = self._detect_changes(scoped_path, before_snapshot)
+                    constraints_ok, violations = self._validate_constraints(dds_found, created, modified)
+                    
+                    all_changed = created + modified
+                    
+                    # Determine final status
                     executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    if constraints_ok and len(all_changed) > 0:
+                        status = 'success'
+                        notes = f"Execution completed. Files changed: {len(all_changed)} ({len(created)} created, {len(modified)} modified). Constraints: OK."
+                    elif not constraints_ok:
+                        status = 'failed'
+                        notes = f"Constraint violations: {', '.join(violations)}. Files changed: {len(all_changed)}"
+                    else:
+                        status = 'success'
+                        notes = f"Execution completed. No files changed."
                     
                     report = ExecutionReport(
                         dds_id=dds_id,
                         action_type='code_change',
-                        status='success',
+                        status=status,
                         executed_at=executed_at,
-                        notes=f'Aider execution completed. Result: {result}'
+                        notes=notes
                     )
                     
-                    self._save_report(report)
+                    # PHASE 8: Persist report and mark DDS executed
+                    self._save_execution_report(report)
+                    self._mark_dds_executed(dds_id, status, executed_at, notes)
+                    
+                    # Build user summary
+                    summary = self._build_user_summary(report, created, modified, deleted, constraints_ok, violations)
+                    logger.info(f"\n{summary}")
+                    
                     logger.info(f"DDS v2 executed successfully: {dds_id}")
                     return report
                     
                 except NotImplementedError as e:
-                    # Expected in PHASE 6: aider_runner not yet implemented
+                    # Expected in PHASE 6/7: aider_runner not yet implemented
+                    # Simulate post-execution analysis with no changes
                     logger.info(f"Aider runner not implemented (expected): {e}")
+                    logger.info("Simulating post-execution analysis (no changes expected)")
+                    
+                    created, modified, deleted = self._detect_changes(scoped_path, before_snapshot)
+                    constraints_ok, violations = self._validate_constraints(dds_found, created, modified)
+                    
+                    all_changed = created + modified
                     
                     executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     
@@ -628,10 +911,17 @@ class Programmer:
                         action_type='code_change',
                         status='failed',
                         executed_at=executed_at,
-                        notes=f'External tool invoked but not implemented. Workspace ready at {scoped_path}. Prompt: {len(prompt)} chars. (PHASE 6)'
+                        notes=f'External tool not implemented. Workspace prepared at: {scoped_path}. Post-execution analysis: {len(all_changed)} files changed'
                     )
                     
-                    self._save_report(report)
+                    # PHASE 8: Persist report and mark DDS executed (as failed)
+                    self._save_execution_report(report)
+                    self._mark_dds_executed(dds_id, 'failed', executed_at, report.notes)
+                    
+                    # Build user summary
+                    summary = self._build_user_summary(report, created, modified, deleted, constraints_ok, violations)
+                    logger.info(f"\n{summary}")
+                    
                     logger.info(f"DDS v2 workspace prepared, tool invocation attempted: {dds_id}")
                     return report
                     
@@ -642,29 +932,35 @@ class Programmer:
             logger.error(f"DDS v2 execution failed: {e}")
             
             # Create failure report
+            execution_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             report = ExecutionReport(
                 dds_id=dds_id,
                 action_type='code_change',
                 status='failed',
-                executed_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                executed_at=execution_time,
                 notes=f"Execution failed: {str(e)}"
             )
             
-            self._save_report(report)
+            # PHASE 8: Persist report and mark DDS executed (as failed)
+            self._save_execution_report(report)
+            self._mark_dds_executed(dds_id, 'failed', execution_time, report.notes)
             raise
         except Exception as e:
             logger.error(f"Unexpected error during workspace creation: {e}")
             
             # Create failure report
+            execution_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             report = ExecutionReport(
                 dds_id=dds_id,
                 action_type='code_change',
                 status='failed',
-                executed_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                executed_at=execution_time,
                 notes=f"Workspace creation failed: {str(e)}"
             )
             
-            self._save_report(report)
+            # PHASE 8: Persist report and mark DDS executed (as failed)
+            self._save_execution_report(report)
+            self._mark_dds_executed(dds_id, 'failed', execution_time, report.notes)
             raise ProgrammerError(f"Workspace creation failed: {str(e)}") from e
     
     def get_last_report(self) -> Optional[ExecutionReport]:
