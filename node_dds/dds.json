@@ -114,22 +114,6 @@
       "created_at": "2026-02-02T13:00:00Z"
     },
     {
-      "id": "DDS-INVALID-V2",
-      "version": 2,
-      "type": "code_change",
-      "project": "test",
-      "instructions": [
-        "test"
-      ],
-      "allowed_paths": [
-        "src/"
-      ],
-      "tool": "aider",
-      "constraints": {},
-      "status": "approved",
-      "created_at": "2026-02-02T13:05:00Z"
-    },
-    {
       "id": "DDS-WRONG-TOOL",
       "version": 2,
       "type": "code_change",
@@ -164,6 +148,25 @@
       },
       "status": "approved",
       "created_at": "2026-02-02T13:10:00Z"
+    },
+    {
+      "id": "DDS-TRAVERSAL",
+      "version": 2,
+      "type": "code_change",
+      "project": "FitnessAi",
+      "goal": "Test traversal",
+      "instructions": [
+        "test"
+      ],
+      "allowed_paths": [
+        "../../../tmp_outside/"
+      ],
+      "tool": "aider",
+      "constraints": {
+        "max_files": 5
+      },
+      "status": "approved",
+      "created_at": "2026-02-02T13:16:00Z"
     }
   ]
 }

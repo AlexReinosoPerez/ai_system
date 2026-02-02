@@ -479,6 +479,42 @@ class Programmer:
                 logger.info(f"Copied project '{project}' to workspace: {workspace_path}")
                 file_count = len(list(workspace_path.rglob('*')))
                 
+                # PHASE 4: Create scoped workspace with allowed_paths only
+                allowed_paths = dds_found.get('allowed_paths', [])
+                scoped_path = workspace_path / '_scoped'
+                scoped_path.mkdir(exist_ok=True)
+                logger.info(f"Creating scoped workspace: {scoped_path}")
+                
+                # Validate and copy allowed paths
+                for allowed in allowed_paths:
+                    # Validate path
+                    source_path = workspace_path / allowed
+                    
+                    # Check if path exists
+                    if not source_path.exists():
+                        raise ProgrammerError(f"Allowed path does not exist in workspace: {allowed}")
+                    
+                    # Ensure it's within workspace (security check)
+                    try:
+                        source_path.resolve().relative_to(workspace_path.resolve())
+                    except ValueError:
+                        raise ProgrammerError(f"Allowed path escapes workspace: {allowed}")
+                    
+                    # Copy to scoped workspace
+                    target_path = scoped_path / allowed
+                    
+                    if source_path.is_dir():
+                        # Copy directory with all contents
+                        shutil.copytree(source_path, target_path, dirs_exist_ok=True)
+                        logger.info(f"Copied directory to scoped workspace: {allowed}")
+                    else:
+                        # Copy individual file
+                        target_path.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(source_path, target_path)
+                        logger.info(f"Copied file to scoped workspace: {allowed}")
+                
+                scoped_count = len(list(scoped_path.rglob('*')))
+                
                 executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 
                 report = ExecutionReport(
@@ -486,7 +522,7 @@ class Programmer:
                     action_type='code_change',
                     status='failed',
                     executed_at=executed_at,
-                    notes=f'Workspace created successfully at {workspace_path} with {file_count} items. External tool execution not implemented (PHASE 3)'
+                    notes=f'Scoped workspace prepared at {scoped_path} with {scoped_count} items from allowed_paths. External tool execution not implemented (PHASE 4)'
                 )
                 
                 self._save_report(report)

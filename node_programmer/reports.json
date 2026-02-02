@@ -1,11 +1,11 @@
 {
   "executions": [
     {
-      "dds_id": "DDS-NONEXISTENT-PROJECT",
+      "dds_id": "DDS-TRAVERSAL",
       "action_type": "code_change",
       "status": "failed",
-      "executed_at": "2026-02-02 12:13:11",
-      "notes": "Execution failed: Project source not found: NonExistentProject"
+      "executed_at": "2026-02-02 12:18:49",
+      "notes": "Execution failed: Allowed path escapes workspace: ../../../tmp_outside/"
     }
   ]
 }
