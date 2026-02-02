@@ -1,0 +1,2 @@
+# Workspaces directory for external tool execution
+# Each DDS execution will have its isolated workspace here
