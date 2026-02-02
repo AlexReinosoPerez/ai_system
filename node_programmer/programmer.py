@@ -64,6 +64,38 @@ class Programmer:
         logger.info(f"Validated sandbox path: {relative_path} -> {target_abs}")
         return target_abs
     
+    def _validate_allowed_paths(self, target_path: Path, allowed_paths: list) -> bool:
+        """
+        Validate that target path is within allowed paths scope
+        
+        Args:
+            target_path: Absolute Path to validate
+            allowed_paths: List of relative paths from DDS allowed_paths field
+            
+        Returns:
+            True if path is allowed
+            
+        Raises:
+            ProgrammerError: If allowed_paths missing or target not in scope
+        """
+        if not allowed_paths:
+            raise ProgrammerError("DDS missing required field: allowed_paths")
+        
+        sandbox_abs = Path(self.SANDBOX_DIR).resolve()
+        
+        for allowed in allowed_paths:
+            allowed_abs = (sandbox_abs / allowed).resolve()
+            
+            # Check if target is the allowed path or inside it
+            try:
+                target_path.relative_to(allowed_abs)
+                logger.info(f"Path allowed: {target_path} within {allowed}")
+                return True
+            except ValueError:
+                continue
+        
+        raise ProgrammerError("Target path not allowed by DDS")
+    
     def _load_reports(self) -> List[ExecutionReport]:
         """Load execution reports from JSON"""
         if not os.path.exists(self.REPORTS_FILE):
@@ -171,6 +203,11 @@ class Programmer:
             filename = f"noop_{dds_id}_{timestamp}.txt"
             filepath = os.path.join(self.SANDBOX_DIR, filename)
             
+            # Validate allowed_paths
+            target_path = Path(filepath).resolve()
+            allowed_paths = dds_found.get('allowed_paths')
+            self._validate_allowed_paths(target_path, allowed_paths)
+            
             executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             content = f"DDS {dds_id} executed at {executed_at}"
             
@@ -253,6 +290,10 @@ class Programmer:
         try:
             # Validate and resolve path
             target_path = self._validate_sandbox_path(path)
+            
+            # Validate allowed_paths
+            allowed_paths = dds_found.get('allowed_paths')
+            self._validate_allowed_paths(target_path, allowed_paths)
             
             # Check if file exists
             file_existed = target_path.exists()

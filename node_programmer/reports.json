@@ -1,32 +1,18 @@
 {
   "executions": [
     {
-      "dds_id": "DDS-20260202112854",
+      "dds_id": "DDS-TEST-ALLOWED",
       "action_type": "touch_file",
       "status": "success",
-      "executed_at": "2026-02-02 11:29:37",
-      "notes": "File created: test_output.txt (25 bytes written)"
+      "executed_at": "2026-02-02 11:38:39",
+      "notes": "File created: allowed/output.txt (26 bytes written)"
     },
     {
-      "dds_id": "DDS-TEST-OVERWRITE",
-      "action_type": "touch_file",
-      "status": "success",
-      "executed_at": "2026-02-02 11:29:59",
-      "notes": "File overwritten: test_output.txt (15 bytes written)"
-    },
-    {
-      "dds_id": "DDS-TEST-SUBDIR",
-      "action_type": "touch_file",
-      "status": "success",
-      "executed_at": "2026-02-02 11:30:09",
-      "notes": "File created: outputs/reports/summary.txt (19 bytes written)"
-    },
-    {
-      "dds_id": "DDS-20260202104301",
+      "dds_id": "DDS-TEST-NOOP-V1",
       "action_type": "noop",
       "status": "success",
-      "executed_at": "2026-02-02 11:32:37",
-      "notes": "Noop action completed. File: noop_DDS-20260202104301_20260202113237.txt"
+      "executed_at": "2026-02-02 11:38:58",
+      "notes": "Noop action completed. File: noop_DDS-TEST-NOOP-V1_20260202113858.txt"
     }
   ]
 }

@@ -41,6 +41,53 @@
       "content": "Nested file content",
       "status": "approved",
       "created_at": "2026-02-02 11:31:00"
+    },
+    {
+      "id": "DDS-TEST-NO-ALLOWED",
+      "project": "test",
+      "title": "No allowed_paths",
+      "type": "touch_file",
+      "path": "test.txt",
+      "content": "content",
+      "status": "approved",
+      "created_at": "2026-02-02 12:00:00"
+    },
+    {
+      "id": "DDS-TEST-ALLOWED",
+      "project": "test",
+      "title": "With allowed_paths",
+      "type": "touch_file",
+      "path": "allowed/output.txt",
+      "content": "DDS v1 enforcement working",
+      "allowed_paths": [
+        "allowed/"
+      ],
+      "status": "approved",
+      "created_at": "2026-02-02 12:01:00"
+    },
+    {
+      "id": "DDS-TEST-WRONG-SCOPE",
+      "project": "test",
+      "title": "Wrong scope",
+      "type": "touch_file",
+      "path": "forbidden/data.txt",
+      "content": "should not write",
+      "allowed_paths": [
+        "allowed/"
+      ],
+      "status": "approved",
+      "created_at": "2026-02-02 12:02:00"
+    },
+    {
+      "id": "DDS-TEST-NOOP-V1",
+      "project": "test",
+      "title": "Noop v1",
+      "type": "noop",
+      "allowed_paths": [
+        "."
+      ],
+      "status": "approved",
+      "created_at": "2026-02-02 12:03:00"
     }
   ]
 }
