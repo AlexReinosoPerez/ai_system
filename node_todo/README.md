@@ -2,21 +2,29 @@
 
 **Propósito:** Gestión de tareas de alto nivel (ToDo) y generación de propuestas DDS v2 para ejecución gobernada.
 
-**Versión:** 1.0.0  
+**Versión:** 2.2.0  
 **Fecha:** 2026-02-02
 
 ---
 
 ## 📋 Qué ES este componente
 
-`node_todo` es un sistema de gestión de tareas que permite:
+`node_todo` ofrece **dos versiones** para gestión de tareas:
 
+### Versión Avanzada (TodoManager + DDSGenerator)
 1. **Crear tareas de alto nivel** con título, descripción, archivos afectados y constraints
 2. **Traducir tareas en propuestas DDS v2** de forma determinista
 3. **Mantener trazabilidad** entre tareas y DDS generados
-4. **Gestionar el ciclo de vida** de tareas desde creación hasta completado
+4. **Gestionar el ciclo de vida** con FSM de 6 estados
+5. **Validaciones exhaustivas** (path traversal, FSM, constraints)
 
-**Este componente NO ejecuta código. Solo gestiona tareas y genera propuestas.**
+### Versión Simplificada (TodoRegistry + TodoToDDSConverter)
+1. **Gestión CRUD básica** de tareas
+2. **Conversión simple** a propuestas DDS v2
+3. **Sin FSM complejo** (solo 3 estados: open, converted, closed)
+4. **Código minimalista** para casos de uso simples
+
+**Ambas versiones NO ejecutan código. Solo gestionan tareas y generan propuestas.**
 
 ---
 
@@ -32,21 +40,45 @@
 
 ## 🏗️ Arquitectura
 
+### Archivos
+
 ```
 node_todo/
-├── __init__.py           # Exports: TodoManager, DDSGenerator
-├── todo_manager.py       # CRUD de tareas, manejo de estados
-├── dds_generator.py      # Traducción determinista ToDo → DDS
-├── todos.json            # Almacén de tareas
-└── README.md             # Este archivo
+├── __init__.py              # Exports: TodoManager, DDSGenerator, TodoRegistry, TodoToDDSConverter
+├── todo_manager.py          # Versión avanzada: CRUD con FSM
+├── dds_generator.py         # Versión avanzada: Traducción con metadatos
+├── todos.json               # Persistencia versión avanzada
+├── todo_registry.py         # Versión simplificada: CRUD básico
+├── todo_to_dds.py           # Versión simplificada: Conversión simple
+├── todo.json                # Persistencia versión simplificada
+└── README.md                # Este archivo
 ```
 
-### Componentes
+### Componentes - Versión Avanzada
 
 **TodoManager:**
-- Responsabilidad: Gestión del ciclo de vida de tareas
+- Responsabilidad: Gestión del ciclo de vida de tareas con FSM
 - Operaciones: CRUD, actualización de estados, vinculación con DDS
 - Persistencia: `todos.json`
+- Estados: pending, draft_generated, approved, completed, failed, cancelled
+
+**DDSGenerator:**
+- Responsabilidad: Traducción determinista con metadatos completos
+- Operaciones: Generación de DDS, validación, persistencia en `node_dds/dds.json`
+- Traducción: Campo a campo, sin IA, sin heurísticas
+
+### Componentes - Versión Simplificada
+
+**TodoRegistry:**
+- Responsabilidad: Gestión CRUD básica de tareas
+- Operaciones: create, list, get, update_status
+- Persistencia: `todo.json`
+- Estados: open, converted, closed
+
+**TodoToDDSConverter:**
+- Responsabilidad: Conversión simple a propuesta DDS
+- Operaciones: generate_dds() retorna dict (NO persiste)
+- Constraints: Valores conservadores por defecto
 
 **DDSGenerator:**
 - Responsabilidad: Traducción determinista de ToDo a DDS v2 draft
@@ -217,6 +249,206 @@ dds_id = gen.generate_dds_from_todo('TODO-20260202-001')
 # El DDS se crea en node_dds/dds.json con status='draft'
 # El ToDo se actualiza a status='draft_generated'
 ```
+
+---
+
+## 📖 API Pública - Versión Simplificada
+
+### TodoRegistry
+
+#### `create_todo(project, title, description, priority="medium") -> str`
+
+Crea un nuevo ToDo.
+
+**Parámetros:**
+- `project` (str): Nombre del proyecto
+- `title` (str): Título del ToDo
+- `description` (str): Descripción detallada
+- `priority` (str): Prioridad (low|medium|high). Default: medium
+
+**Retorna:** `todo_id` (str) - ID único formato `TODO-YYYYMMDD-HHMMSS`
+
+**Ejemplo:**
+```python
+from node_todo import TodoRegistry
+
+registry = TodoRegistry()
+todo_id = registry.create_todo(
+    project="ai_system",
+    title="Add validation",
+    description="Implement input validation for DDS",
+    priority="high"
+)
+# Retorna: 'TODO-20260202-143022'
+```
+
+---
+
+#### `list_todos(status=None) -> List[Dict]`
+
+Lista todos los ToDos, opcionalmente filtrados por estado.
+
+**Ejemplo:**
+```python
+# Listar todos
+all_todos = registry.list_todos()
+
+# Listar solo abiertos
+open_todos = registry.list_todos(status="open")
+```
+
+---
+
+#### `get_todo_by_id(todo_id) -> Optional[Dict]`
+
+Obtiene un ToDo por su ID.
+
+**Retorna:** Dict del ToDo o None si no existe
+
+**Ejemplo:**
+```python
+todo = registry.get_todo_by_id(todo_id)
+print(todo["title"])   # "Add validation"
+print(todo["status"])  # "open"
+```
+
+---
+
+#### `update_status(todo_id, new_status) -> bool`
+
+Actualiza el estado de un ToDo.
+
+**Parámetros:**
+- `new_status`: Nuevo estado (open|converted|closed)
+
+**Retorna:** True si se actualizó, False si no se encontró
+
+**Ejemplo:**
+```python
+result = registry.update_status(todo_id, "converted")
+# True
+```
+
+---
+
+### TodoToDDSConverter
+
+#### `generate_dds(todo) -> Dict`
+
+Genera una propuesta DDS v2 desde un ToDo.
+
+**Estructura generada:**
+- `status`: **"proposed"** (NUNCA "approved")
+- `allowed_paths`: ["src/", "tests/"] (por defecto)
+- `constraints`: Valores conservadores
+  - `max_files_changed`: 5
+  - `no_new_dependencies`: True
+  - `no_refactor`: True
+
+**Retorna:** Dict con estructura DDS v2 (NO persiste automáticamente)
+
+**Ejemplo:**
+```python
+from node_todo import TodoToDDSConverter
+
+todo = registry.get_todo_by_id(todo_id)
+converter = TodoToDDSConverter()
+dds_proposal = converter.generate_dds(todo)
+
+# dds_proposal es un dict con status="proposed"
+# NO se ejecuta automáticamente
+# NO se persiste automáticamente
+print(dds_proposal["status"])  # "proposed"
+print(dds_proposal["metadata"]["source_todo"])  # todo_id
+```
+
+---
+
+## 🔄 Comparación de Versiones
+
+| Característica | Versión Avanzada | Versión Simplificada |
+|----------------|------------------|----------------------|
+| **Estados** | 6 (FSM completo) | 3 (básicos) |
+| **Validaciones** | Path traversal, FSM, constraints | Básicas (priority, status) |
+| **Persistencia DDS** | Automática en node_dds/dds.json | Manual (retorna dict) |
+| **Metadatos** | Completos | Básicos |
+| **Complejidad** | Alta | Baja |
+| **Uso recomendado** | Producción, control total | Prototipos, casos simples |
+
+---
+
+## 🔄 Flujo Completo - Versión Simplificada
+
+### PASO 1: Crear ToDo
+
+```python
+from node_todo import TodoRegistry
+
+registry = TodoRegistry()
+todo_id = registry.create_todo(
+    project="ai_system",
+    title="Fix bug in validation",
+    description="Add check for empty strings",
+    priority="high"
+)
+# Estado inicial: "open"
+```
+
+### PASO 2: Convertir a Propuesta DDS
+
+```python
+from node_todo import TodoToDDSConverter
+
+todo = registry.get_todo_by_id(todo_id)
+converter = TodoToDDSConverter()
+dds_proposal = converter.generate_dds(todo)
+
+# dds_proposal["status"] == "proposed"
+# NO se ejecuta ni se aprueba automáticamente
+```
+
+### PASO 3: Actualizar Estado del ToDo
+
+```python
+# Marcar como convertido
+registry.update_status(todo_id, "converted")
+```
+
+### PASO 4: Revisión y Aprobación Manual (fuera de node_todo)
+
+```python
+# El humano revisa dds_proposal
+# El humano decide si aprobar o no
+# Si aprueba, escribe manualmente en node_dds/dds.json
+# y cambia status="proposed" → status="approved"
+```
+
+### PASO 5: Cerrar ToDo tras Ejecución
+
+```python
+# Tras ejecutar el DDS exitosamente
+registry.update_status(todo_id, "closed")
+```
+
+---
+
+## 📊 Estados - Versión Simplificada
+
+### Estados Válidos
+
+- **`open`**: ToDo recién creado, sin convertir
+- **`converted`**: Propuesta DDS generada (pero no ejecutada)
+- **`closed`**: Completado o descartado
+
+### Transiciones Permitidas
+
+```
+open → converted → closed
+  ↓                  ↑
+  └──────────────────┘
+```
+
+No hay validación FSM estricta en esta versión. Cualquier transición es permitida.
 
 ---
 
