@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 from node_programmer.execution_report import ExecutionReport
+from node_programmer.external_tools.aider_runner import run_aider
 from shared.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -589,19 +590,51 @@ class Programmer:
                 prompt_preview = prompt[:200] + "..." if len(prompt) > 200 else prompt
                 logger.debug(f"Prompt preview: {prompt_preview}")
                 
-                executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                
-                report = ExecutionReport(
-                    dds_id=dds_id,
-                    action_type='code_change',
-                    status='failed',
-                    executed_at=executed_at,
-                    notes=f'Prompt built ({len(prompt)} chars). Scoped workspace ready at {scoped_path} with {scoped_count} items. External tool execution not implemented (PHASE 5)'
-                )
-                
-                self._save_report(report)
-                logger.info(f"DDS v2 workspace ready: {dds_id}")
-                return report
+                # PHASE 6: Invoke external tool (mock)
+                try:
+                    logger.info(f"Invoking Aider for DDS: {dds_id}")
+                    logger.info(f"Workspace: {scoped_path}")
+                    logger.info(f"Allowed paths: {allowed_paths}")
+                    
+                    result = run_aider(
+                        workspace_path=str(scoped_path),
+                        allowed_paths=allowed_paths,
+                        prompt=prompt
+                    )
+                    
+                    # If we get here, tool executed successfully (future implementation)
+                    executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    report = ExecutionReport(
+                        dds_id=dds_id,
+                        action_type='code_change',
+                        status='success',
+                        executed_at=executed_at,
+                        notes=f'Aider execution completed. Result: {result}'
+                    )
+                    
+                    self._save_report(report)
+                    logger.info(f"DDS v2 executed successfully: {dds_id}")
+                    return report
+                    
+                except NotImplementedError as e:
+                    # Expected in PHASE 6: aider_runner not yet implemented
+                    logger.info(f"Aider runner not implemented (expected): {e}")
+                    
+                    executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    report = ExecutionReport(
+                        dds_id=dds_id,
+                        action_type='code_change',
+                        status='failed',
+                        executed_at=executed_at,
+                        notes=f'External tool invoked but not implemented. Workspace ready at {scoped_path}. Prompt: {len(prompt)} chars. (PHASE 6)'
+                    )
+                    
+                    self._save_report(report)
+                    logger.info(f"DDS v2 workspace prepared, tool invocation attempted: {dds_id}")
+                    return report
+                    
             else:
                 raise ProgrammerError(f"Project source not found: {project}")
             
