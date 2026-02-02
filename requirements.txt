@@ -8,6 +8,16 @@ colorlog>=6.7.0
 # HTTP requests
 requests>=2.31.0
 
-# AI/ML (optional, uncomment as needed)
+# Gmail API
+google-api-python-client>=2.80.0
+google-auth>=2.16.0
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.1.0
+
+# ML/AI - Local Models
+transformers>=4.30.0
+torch>=2.0.0
+
+# AI/ML - External APIs (optional, uncomment as needed)
 # openai>=1.0.0
 # anthropic>=0.3.0

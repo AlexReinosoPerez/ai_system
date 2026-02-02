@@ -27,6 +27,8 @@ class TelegramBot:
         self.app.add_handler(CommandHandler("status", self.status_command))
         self.app.add_handler(CommandHandler("help", self.help_command))
         self.app.add_handler(CommandHandler("project", self.project_command))
+        self.app.add_handler(CommandHandler("project_summary", self.project_summary_command))
+        self.app.add_handler(CommandHandler("inbox", self.inbox_command))
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
@@ -51,6 +53,8 @@ class TelegramBot:
             "/start - Iniciar el bot\n"
             "/status - Ver estado del sistema\n"
             "/project <nombre> - Ver info de proyecto\n"
+            "/project_summary <nombre> - Ver resumen del proyecto\n"
+            "/inbox [cantidad] - Ver correos recientes\n"
             "/help - Mostrar esta ayuda"
         )
         await update.message.reply_text(help_text)
@@ -68,6 +72,44 @@ class TelegramBot:
         
         project_name = context.args[0]
         result = router.project(project_name)
+        await update.message.reply_text(result)
+    
+    async def project_summary_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /project_summary command"""
+        logger.info(f"Command /project_summary received from user {update.effective_user.id}")
+        
+        if not context.args:
+            await update.message.reply_text(
+                "⚠️ Uso: /project_summary <nombre>\n\n"
+                "Ejemplo: /project_summary fitnessai"
+            )
+            return
+        
+        project_name = context.args[0]
+        result = router.project_summary(project_name)
+        await update.message.reply_text(result)
+    
+    async def inbox_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /inbox command"""
+        logger.info(f"Command /inbox received from user {update.effective_user.id}")
+        
+        count = 10
+        if context.args:
+            try:
+                count = int(context.args[0])
+                if count < 1 or count > 50:
+                    await update.message.reply_text(
+                        "⚠️ La cantidad debe estar entre 1 y 50"
+                    )
+                    return
+            except ValueError:
+                await update.message.reply_text(
+                    "⚠️ Uso: /inbox [cantidad]\n\n"
+                    "Ejemplo: /inbox 20"
+                )
+                return
+        
+        result = router.inbox(count)
         await update.message.reply_text(result)
     
     def run(self):
