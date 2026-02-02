@@ -96,6 +96,65 @@ class Programmer:
         
         raise ProgrammerError("Target path not allowed by DDS")
     
+    def _validate_dds_v2(self, dds: dict) -> None:
+        """
+        Validate DDS v2 structure and contract
+        
+        Args:
+            dds: DDS proposal dictionary
+            
+        Raises:
+            ProgrammerError: If validation fails
+        """
+        logger.info(f"Validating DDS v2: {dds.get('id')}")
+        
+        # Validate version
+        version = dds.get('version')
+        if version != 2:
+            raise ProgrammerError(f"Invalid version: expected 2, got {version}")
+        
+        # Validate type
+        dds_type = dds.get('type')
+        if dds_type != 'code_change':
+            raise ProgrammerError(f"Invalid type: expected 'code_change', got {dds_type}")
+        
+        # Validate project
+        project = dds.get('project')
+        if not project:
+            raise ProgrammerError("Missing required field: project")
+        
+        # Validate goal
+        goal = dds.get('goal')
+        if not goal or not isinstance(goal, str) or not goal.strip():
+            raise ProgrammerError("Missing or invalid required field: goal (must be non-empty string)")
+        
+        # Validate instructions
+        instructions = dds.get('instructions')
+        if not instructions or not isinstance(instructions, list) or len(instructions) == 0:
+            raise ProgrammerError("Missing or invalid required field: instructions (must be non-empty list)")
+        
+        # Validate allowed_paths
+        allowed_paths = dds.get('allowed_paths')
+        if not allowed_paths or not isinstance(allowed_paths, list) or len(allowed_paths) == 0:
+            raise ProgrammerError("Missing or invalid required field: allowed_paths (must be non-empty list)")
+        
+        # Validate tool
+        tool = dds.get('tool')
+        if tool != 'aider':
+            raise ProgrammerError(f"Invalid tool: expected 'aider', got {tool}")
+        
+        # Validate constraints
+        constraints = dds.get('constraints')
+        if not constraints or not isinstance(constraints, dict):
+            raise ProgrammerError("Missing or invalid required field: constraints (must be dict)")
+        
+        # Validate status
+        status = dds.get('status')
+        if status != 'approved':
+            raise ProgrammerError(f"DDS not approved: status is '{status}'")
+        
+        logger.info(f"DDS v2 validation passed: {dds.get('id')}")
+    
     def _load_reports(self) -> List[ExecutionReport]:
         """Load execution reports from JSON"""
         if not os.path.exists(self.REPORTS_FILE):
@@ -345,6 +404,70 @@ class Programmer:
             
             self._save_report(report)
             raise ProgrammerError(f"Execution failed: {str(e)}") from e
+    
+    def execute_code_change(self, dds_id: str) -> ExecutionReport:
+        """
+        Execute code_change action for DDS v2 proposal (PHASE 2: validation only)
+        
+        Args:
+            dds_id: DDS proposal ID to execute
+            
+        Returns:
+            ExecutionReport with validation status
+            
+        Raises:
+            ProgrammerError: If validation fails
+        """
+        logger.info(f"Executing code_change for DDS: {dds_id}")
+        
+        # Check if already executed
+        if self._is_already_executed(dds_id):
+            raise ProgrammerError(f"DDS {dds_id} has already been executed")
+        
+        # Verify DDS is approved
+        approved_dds = self._get_approved_dds()
+        dds_found = None
+        for dds in approved_dds:
+            if dds.get('id') == dds_id:
+                dds_found = dds
+                break
+        
+        if not dds_found:
+            raise ProgrammerError(f"DDS {dds_id} not found or not approved")
+        
+        # Validate DDS v2 structure
+        try:
+            self._validate_dds_v2(dds_found)
+            
+            # PHASE 2: Validation only - do not execute
+            executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            report = ExecutionReport(
+                dds_id=dds_id,
+                action_type='code_change',
+                status='failed',
+                executed_at=executed_at,
+                notes='DDS v2 validation passed but execution not implemented (PHASE 2)'
+            )
+            
+            self._save_report(report)
+            logger.info(f"DDS v2 validated but not executed: {dds_id}")
+            return report
+            
+        except ProgrammerError as e:
+            logger.error(f"DDS v2 validation failed: {e}")
+            
+            # Create failure report
+            report = ExecutionReport(
+                dds_id=dds_id,
+                action_type='code_change',
+                status='failed',
+                executed_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                notes=f"Validation failed: {str(e)}"
+            )
+            
+            self._save_report(report)
+            raise
     
     def get_last_report(self) -> Optional[ExecutionReport]:
         """

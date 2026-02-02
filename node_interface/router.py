@@ -337,7 +337,9 @@ class Router:
             action_type = dds_found.get('type', 'noop')
             
             # Dispatch to appropriate execution method
-            if action_type == 'touch_file':
+            if action_type == 'code_change':
+                report = self._programmer.execute_code_change(dds_id)
+            elif action_type == 'touch_file':
                 report = self._programmer.execute_touch_file(dds_id)
             elif action_type == 'noop':
                 report = self._programmer.execute_noop(dds_id)
