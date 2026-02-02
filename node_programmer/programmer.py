@@ -5,6 +5,7 @@ Programmer - DDS execution engine with noop actions
 import json
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import List, Optional
 from node_programmer.execution_report import ExecutionReport
 from shared.logger import setup_logger
@@ -28,6 +29,40 @@ class Programmer:
         """Initialize programmer"""
         logger.info("Programmer initialized")
         os.makedirs(self.SANDBOX_DIR, exist_ok=True)
+    
+    def _validate_sandbox_path(self, relative_path: str) -> Path:
+        """
+        Validate that a path is safe for sandbox operations
+        
+        Args:
+            relative_path: Path string to validate (must be relative)
+            
+        Returns:
+            Absolute Path object inside sandbox
+            
+        Raises:
+            ProgrammerError: If path is unsafe (absolute, contains .., outside sandbox)
+        """
+        # Check for absolute path
+        if os.path.isabs(relative_path):
+            raise ProgrammerError(f"Absolute paths not allowed: {relative_path}")
+        
+        # Check for path traversal
+        if '..' in relative_path:
+            raise ProgrammerError(f"Path traversal not allowed: {relative_path}")
+        
+        # Resolve to absolute path
+        sandbox_abs = Path(self.SANDBOX_DIR).resolve()
+        target_abs = (sandbox_abs / relative_path).resolve()
+        
+        # Verify target is inside sandbox
+        try:
+            target_abs.relative_to(sandbox_abs)
+        except ValueError:
+            raise ProgrammerError(f"Path outside sandbox: {relative_path}")
+        
+        logger.info(f"Validated sandbox path: {relative_path} -> {target_abs}")
+        return target_abs
     
     def _load_reports(self) -> List[ExecutionReport]:
         """Load execution reports from JSON"""
@@ -166,6 +201,102 @@ class Programmer:
             report = ExecutionReport(
                 dds_id=dds_id,
                 action_type='noop',
+                status='failed',
+                executed_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                notes=f"Execution failed: {str(e)}"
+            )
+            
+            self._save_report(report)
+            raise ProgrammerError(f"Execution failed: {str(e)}") from e
+    
+    def execute_touch_file(self, dds_id: str) -> ExecutionReport:
+        """
+        Execute touch_file action for DDS proposal
+        
+        Args:
+            dds_id: DDS proposal ID to execute
+            
+        Returns:
+            ExecutionReport with execution details
+            
+        Raises:
+            ProgrammerError: If execution fails
+        """
+        logger.info(f"Executing touch_file for DDS: {dds_id}")
+        
+        # Check if already executed
+        if self._is_already_executed(dds_id):
+            raise ProgrammerError(f"DDS {dds_id} has already been executed")
+        
+        # Verify DDS is approved
+        approved_dds = self._get_approved_dds()
+        dds_found = None
+        for dds in approved_dds:
+            if dds.get('id') == dds_id:
+                dds_found = dds
+                break
+        
+        if not dds_found:
+            raise ProgrammerError(f"DDS {dds_id} not found or not approved")
+        
+        # Validate required fields
+        path = dds_found.get('path')
+        content = dds_found.get('content')
+        
+        if not path:
+            raise ProgrammerError(f"DDS {dds_id} missing required field: path")
+        
+        if content is None:  # Allow empty string
+            raise ProgrammerError(f"DDS {dds_id} missing required field: content")
+        
+        # Execute touch_file action
+        try:
+            # Validate and resolve path
+            target_path = self._validate_sandbox_path(path)
+            
+            # Check if file exists
+            file_existed = target_path.exists()
+            
+            # Create parent directories if needed
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Write file
+            target_path.write_text(content, encoding='utf-8')
+            
+            # Calculate bytes written
+            bytes_written = len(content.encode('utf-8'))
+            
+            result = "overwritten" if file_existed else "created"
+            executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            logger.info(f"File {result}: {target_path} ({bytes_written} bytes)")
+            
+            # Create execution report
+            report = ExecutionReport(
+                dds_id=dds_id,
+                action_type='touch_file',
+                status='success',
+                executed_at=executed_at,
+                notes=f"File {result}: {path} ({bytes_written} bytes written)"
+            )
+            
+            # Save report
+            self._save_report(report)
+            
+            logger.info(f"Successfully executed DDS {dds_id}")
+            return report
+            
+        except ProgrammerError:
+            # Re-raise validation errors
+            raise
+            
+        except Exception as e:
+            logger.error(f"Execution failed for DDS {dds_id}: {e}")
+            
+            # Create failure report
+            report = ExecutionReport(
+                dds_id=dds_id,
+                action_type='touch_file',
                 status='failed',
                 executed_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 notes=f"Execution failed: {str(e)}"

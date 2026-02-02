@@ -320,7 +320,29 @@ class Router:
             self._programmer = Programmer()
         
         try:
-            report = self._programmer.execute_noop(dds_id)
+            # Load DDS to determine action type
+            import json
+            with open('node_dds/dds.json', 'r') as f:
+                data = json.load(f)
+            
+            dds_found = None
+            for proposal in data.get('proposals', []):
+                if proposal.get('id') == dds_id:
+                    dds_found = proposal
+                    break
+            
+            if not dds_found:
+                return f"❌ Error: DDS {dds_id} no encontrado"
+            
+            action_type = dds_found.get('type', 'noop')
+            
+            # Dispatch to appropriate execution method
+            if action_type == 'touch_file':
+                report = self._programmer.execute_touch_file(dds_id)
+            elif action_type == 'noop':
+                report = self._programmer.execute_noop(dds_id)
+            else:
+                return f"❌ Error: Tipo de acción no soportado: {action_type}"
             
             return (
                 f"✅ DDS {dds_id} ejecutado exitosamente\n\n"

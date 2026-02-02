@@ -7,6 +7,40 @@
       "description": "Implement OAuth 2.0 for user login",
       "created_at": "2026-02-02 10:43:01",
       "status": "approved"
+    },
+    {
+      "id": "DDS-20260202112854",
+      "project": "Test touch_file implementation",
+      "title": "touch_file",
+      "description": {
+        "path": "test_output.txt",
+        "content": "Hello from Programmer v1!"
+      },
+      "created_at": "2026-02-02 11:28:54",
+      "status": "approved",
+      "type": "touch_file",
+      "path": "test_output.txt",
+      "content": "Hello from Programmer v1!"
+    },
+    {
+      "id": "DDS-TEST-OVERWRITE",
+      "project": "test",
+      "title": "Test overwrite",
+      "type": "touch_file",
+      "path": "test_output.txt",
+      "content": "UPDATED CONTENT",
+      "status": "approved",
+      "created_at": "2026-02-02 11:30:00"
+    },
+    {
+      "id": "DDS-TEST-SUBDIR",
+      "project": "test",
+      "title": "Test subdir",
+      "type": "touch_file",
+      "path": "outputs/reports/summary.txt",
+      "content": "Nested file content",
+      "status": "approved",
+      "created_at": "2026-02-02 11:31:00"
     }
   ]
 }
