@@ -1,0 +1,11 @@
+{
+  "projects": {
+    "fitnessai": {
+      "name": "FitnessAi",
+      "status": "active",
+      "phase": "development",
+      "priority": "high",
+      "description": "AI-powered fitness application"
+    }
+  }
+}
