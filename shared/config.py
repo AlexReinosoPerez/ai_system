@@ -19,6 +19,10 @@ class Config:
     # AI APIs
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     
+    # Gmail OAuth paths (configurable via env vars)
+    GMAIL_CREDENTIALS_PATH: str = os.getenv("GMAIL_CREDENTIALS_PATH", "secrets/credentials.json")
+    GMAIL_TOKEN_PATH: str = os.getenv("GMAIL_TOKEN_PATH", "secrets/token.json")
+    
     # Environment
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     

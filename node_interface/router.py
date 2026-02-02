@@ -3,6 +3,7 @@ Router - System status reporting for AI System
 """
 
 from shared.logger import setup_logger
+from shared.config import config
 from node_events.github_reader import GitHubProjectReader
 from node_events.summarizer import ProjectSummarizer, SummarizationUnavailable
 from node_events.gmail_reader import GmailReader, GmailUnavailable
@@ -112,18 +113,33 @@ class Router:
         logger.info(f"Inbox query received: count={count}")
         
         if self._gmail_reader is None:
-            self._gmail_reader = GmailReader()
+            try:
+                self._gmail_reader = GmailReader(
+                    credentials_path=config.GMAIL_CREDENTIALS_PATH,
+                    token_path=config.GMAIL_TOKEN_PATH
+                )
+            except GmailUnavailable as e:
+                logger.warning(f"Gmail initialization failed: {e}")
+                return (
+                    "⚠️ Gmail no disponible.\n\n"
+                    "Posibles causas:\n"
+                    "• Falta archivo credentials.json en secrets/\n"
+                    "• Librerías de Google no instaladas\n"
+                    "• Volumen secrets/ no montado en Docker\n\n"
+                    "Consulta DOCKER.md para instrucciones."
+                )
         
         try:
             return self._gmail_reader.get_recent_emails(count)
         except GmailUnavailable as e:
             logger.warning(f"Gmail unavailable: {e}")
             return (
-                "⚠️ Gmail no disponible.\n\n"
+                "⚠️ Error accediendo a Gmail.\n\n"
                 "Posibles causas:\n"
-                "• Falta archivo credentials.json\n"
-                "• Librerías de Google no instaladas\n"
-                "• Error de autenticación OAuth"
+                "• Token expirado o inválido\n"
+                "• Error de autenticación OAuth\n"
+                "• Red no disponible\n\n"
+                f"Detalle: {str(e)}"
             )
     
     def projects(self) -> str:

@@ -42,6 +42,7 @@ env/
 # docs/
 
 # Secrets and credentials (CRITICAL - never include in image)
+secrets/
 credentials.json
 token.json
 .env

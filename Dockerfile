@@ -32,8 +32,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 VOLUME ["/app/node_programmer/workspaces"]
 VOLUME ["/app/node_programmer/sandbox"]
 VOLUME ["/app/audits"]
-VOLUME ["/app/token.json"]
-VOLUME ["/app/credentials.json"]
+VOLUME ["/app/secrets"]
 
 # Create non-root user for security
 # Running as root inside containers is a security risk
