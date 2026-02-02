@@ -61,13 +61,15 @@ Ejecutar cambios de código asistidos por IA de forma **controlada, auditable y 
 
 - **`audits/`**: Logs y auditorías del sistema
 
+> 💡 **Filosofía de diseño**: Ver [docs/philosophy.md](docs/philosophy.md) para principios y decisiones arquitectónicas.
+
 ### Development-Only Components
 
-- **`claude_system/`**: (Development-only) Framework interno para desarrollo asistido por IA
-  - Prompts y documentación de workflow
-  - Roles: Architect, Implementer, Reviewer, Verifier
-  - **No es necesario para ejecutar el sistema en producción**
-  - Ver [claude_system/README.md](claude_system/README.md) para más detalles
+- **`claude_system/`**: **(Development-only)** Framework interno para el desarrollo asistido por IA.
+  - Define roles, prompts y workflow de trabajo
+  - **NO es necesario para ejecutar ai_system en producción**
+  - Usado únicamente durante el desarrollo del propio repositorio
+  - Ver [claude_system/README.md](claude_system/README.md) para metodología de desarrollo
 
 ## 🚀 Programmer v2.1 - Pipeline de Ejecución
 
@@ -145,16 +147,32 @@ cp .env.example .env
 
 ## 🔧 Uso
 
-### Recomendado: Via CLI/Interface
+### Modo Recomendado (Alto Nivel)
+
+El uso normal del sistema es mediante **interfaces** (Telegram bot, CLI, router):
 
 ```bash
-# Aprobar DDS (método recomendado via interface)
-# El sistema gestiona la ejecución automáticamente
+# Via Telegram Bot (si está configurado)
+# Enviar DDS → Sistema aprueba → Ejecución automática
+
+# Via CLI (próximamente)
+# ai-system execute DDS-20260202-CODE-001
+
+# Via Router (para integraciones)
+# El router gestiona el flujo completo
 ```
 
-### Low-Level API (Advanced Usage)
+**Flujo típico:**
+1. Usuario envía DDS v2 (formato JSON)
+2. Sistema valida estructura y constraints
+3. Usuario aprueba ejecución
+4. Programmer ejecuta en workspace aislado
+5. Sistema reporta cambios y validaciones
 
-Para integración directa o testing:
+### Uso Avanzado (API Interna)
+
+> ⚠️ **Este ejemplo muestra el uso directo de la API interna del Programmer.**
+> No es el modo recomendado para producción. Usar interfaces de alto nivel.
 
 ```python
 from node_programmer.programmer import Programmer
@@ -162,7 +180,7 @@ from node_programmer.programmer import Programmer
 # Inicializar programmer
 p = Programmer()
 
-# Ejecutar DDS aprobado
+# Ejecutar DDS aprobado (LOW-LEVEL API)
 report = p.execute_code_change('DDS-20260202-CODE-001')
 
 # Revisar resultado
@@ -170,7 +188,10 @@ print(f"Status: {report.status}")
 print(f"Notes: {report.notes}")
 ```
 
-⚠️ **Nota**: Este es el API interno. En producción se usa via router/interface.
+**Cuándo usar API interna:**
+- Testing unitario del Programmer
+- Integración personalizada (no usar interfaces estándar)
+- Debugging de pipeline de ejecución
 
 ### Resultado de Ejecución
 
@@ -249,9 +270,10 @@ print(f'Status: {report.status}')
 ### Para Desarrolladores
 - **[Programmer Architecture](node_programmer/README.md)**: Pipeline de ejecución detallado
 - **[ARCHITECTURE.md](ARCHITECTURE.md)**: Diagramas y flujos del sistema
+- **[Core Philosophy](docs/philosophy.md)**: Principios de diseño y decisiones arquitectónicas
 
 ### Development Framework (Interno)
-- **[claude_system/](claude_system/)**: Framework de desarrollo asistido por IA
+- **[claude_system/](claude_system/)**: Framework de desarrollo asistido por IA (development-only)
   - Metodología de trabajo con prompts y roles
   - No necesario para ejecutar el runtime en producción
 
