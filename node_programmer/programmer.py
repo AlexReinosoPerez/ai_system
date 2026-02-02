@@ -98,6 +98,72 @@ class Programmer:
         
         raise ProgrammerError("Target path not allowed by DDS")
     
+    def _build_aider_prompt(self, dds: dict) -> str:
+        """
+        Build Aider prompt from DDS v2 specification
+        
+        Args:
+            dds: DDS proposal dictionary
+            
+        Returns:
+            Formatted prompt string for Aider
+            
+        Raises:
+            ProgrammerError: If required fields are missing
+        """
+        logger.info(f"Building Aider prompt for DDS: {dds.get('id')}")
+        
+        # Extract required fields
+        goal = dds.get('goal')
+        if not goal:
+            raise ProgrammerError("Cannot build prompt: missing goal")
+        
+        instructions = dds.get('instructions')
+        if not instructions or not isinstance(instructions, list):
+            raise ProgrammerError("Cannot build prompt: missing or invalid instructions")
+        
+        constraints = dds.get('constraints')
+        if not constraints or not isinstance(constraints, dict):
+            raise ProgrammerError("Cannot build prompt: missing or invalid constraints")
+        
+        # Build prompt
+        prompt_parts = []
+        
+        # Goal section
+        prompt_parts.append("GOAL:")
+        prompt_parts.append(goal)
+        prompt_parts.append("")
+        
+        # Instructions section
+        prompt_parts.append("INSTRUCTIONS:")
+        for instruction in instructions:
+            prompt_parts.append(f"- {instruction}")
+        prompt_parts.append("")
+        
+        # Constraints section
+        prompt_parts.append("CONSTRAINTS:")
+        
+        max_files = constraints.get('max_files_changed', constraints.get('max_files', 'not specified'))
+        prompt_parts.append(f"- Max files changed: {max_files}")
+        
+        no_deps = constraints.get('no_new_dependencies', False)
+        prompt_parts.append(f"- No new dependencies: {str(no_deps).lower()}")
+        
+        no_refactor = constraints.get('no_refactor', False)
+        prompt_parts.append(f"- No refactor: {str(no_refactor).lower()}")
+        prompt_parts.append("")
+        
+        # Rules section
+        prompt_parts.append("RULES:")
+        prompt_parts.append("- Only modify files in allowed paths")
+        prompt_parts.append("- Do not commit changes")
+        prompt_parts.append("- Stop after completing instructions")
+        
+        prompt = "\n".join(prompt_parts)
+        logger.info(f"Built prompt ({len(prompt)} chars) for DDS: {dds.get('id')}")
+        
+        return prompt
+    
     def _validate_dds_v2(self, dds: dict) -> None:
         """
         Validate DDS v2 structure and contract
@@ -515,6 +581,14 @@ class Programmer:
                 
                 scoped_count = len(list(scoped_path.rglob('*')))
                 
+                # PHASE 5: Build Aider prompt
+                prompt = self._build_aider_prompt(dds_found)
+                logger.info(f"Aider prompt built successfully")
+                
+                # Log prompt preview (first 200 chars)
+                prompt_preview = prompt[:200] + "..." if len(prompt) > 200 else prompt
+                logger.debug(f"Prompt preview: {prompt_preview}")
+                
                 executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 
                 report = ExecutionReport(
@@ -522,7 +596,7 @@ class Programmer:
                     action_type='code_change',
                     status='failed',
                     executed_at=executed_at,
-                    notes=f'Scoped workspace prepared at {scoped_path} with {scoped_count} items from allowed_paths. External tool execution not implemented (PHASE 4)'
+                    notes=f'Prompt built ({len(prompt)} chars). Scoped workspace ready at {scoped_path} with {scoped_count} items. External tool execution not implemented (PHASE 5)'
                 )
                 
                 self._save_report(report)
