@@ -75,5 +75,19 @@ def setup_logger(
     return logger
 
 
+def get_logger(name: str, level: str = "INFO") -> logging.Logger:
+    """
+    Get or create a logger instance.
+    
+    Args:
+        name: Logger name
+        level: Logging level (default: INFO)
+    
+    Returns:
+        Configured logger instance
+    """
+    return setup_logger(name, level)
+
+
 # Default logger
 logger = setup_logger("ai_system")

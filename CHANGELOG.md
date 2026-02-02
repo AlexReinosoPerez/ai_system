@@ -5,6 +5,64 @@ All notable changes to AI System will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-02-02
+
+### Added - ToDo System
+
+#### node_todo/ Component
+- **TodoManager**: CRUD de tareas de alto nivel
+  - `create_todo()`: Crear tareas con título, descripción, archivos, constraints
+  - `get_todo()`: Obtener tarea por ID
+  - `list_todos()`: Listar tareas (filtro opcional por estado)
+  - `update_todo_status()`: Actualizar estado con validación FSM
+  - `link_dds()`: Vincular DDS a tarea
+  - Estados: pending, draft_generated, approved, completed, failed, cancelled
+  - Persistencia en `todos.json`
+
+- **DDSGenerator**: Traducción determinista ToDo → DDS v2
+  - `generate_dds_from_todo()`: Generar DDS draft desde tarea
+  - Traducción campo a campo (sin IA, sin heurísticas)
+  - DDS generados siempre con `status='draft'` (nunca auto-aprobados)
+  - Persistencia en `node_dds/dds.json`
+  - Actualización automática de estado de tarea
+
+#### Features
+- **Máquina de estados finita (FSM)**: Validación de transiciones de estado
+- **Validación de paths**: Prevención de path traversal en affected_files
+- **Constraints obligatorios**: `max_files_changed` requerido
+- **Trazabilidad completa**: Vinculación ToDo ↔ DDS
+- **Formato IDs**: `TODO-YYYYMMDD-XXX` y `DDS-YYYYMMDD-CODE-XXX`
+
+#### Documentation
+- **node_todo/README.md**: Documentación completa del componente
+  - API pública con ejemplos
+  - FSM con estados y transiciones
+  - Flujo completo ToDo → DDS → Ejecución
+  - Limitaciones explícitas (v1.0)
+  - Roadmap (v2.0, v3.0)
+
+### Changed
+- **README.md**: Agregado `node_todo/` a Runtime Components
+- **CHANGELOG.md**: Agregada sección v2.2.0
+- **Documentación Adicional**: Agregado link a node_todo/README.md
+
+### Guarantees
+✅ No auto-aprobación de DDS  
+✅ No ejecución directa sin aprobación humana  
+✅ Validación de paths (no path traversal)  
+✅ Estado completo persistido (auditoría)  
+✅ Sin dependencias externas nuevas  
+
+### Limitations (v1.0)
+❌ Traducción manual (no masiva)  
+❌ Actualización manual de estado tras ejecución  
+❌ Sin CLI (solo API Python)  
+❌ Sin interface web  
+❌ Sin templates predefinidos  
+❌ Sin dependencias entre tareas  
+
+---
+
 ## [2.1.0] - 2026-02-02
 
 ### Added - Programmer v2.1

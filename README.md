@@ -51,6 +51,12 @@ Ejecutar cambios de código asistidos por IA de forma **controlada, auditable y 
   - `dds.json`: Almacén de propuestas aprobadas
   - Soporte DDS v1 (touch_file) y v2 (code_change)
 
+- **`node_todo/`**: Sistema de gestión de tareas (NEW v2.2)
+  - `todo_manager.py`: CRUD de tareas de alto nivel
+  - `dds_generator.py`: Traducción determinista ToDo → DDS draft
+  - `todos.json`: Almacén de tareas
+  - Ver [node_todo/README.md](node_todo/README.md) para detalles
+
 - **`shared/`**: Módulos compartidos
   - `config.py`: Configuración centralizada
   - `logger.py`: Sistema de logging unificado
@@ -265,6 +271,7 @@ print(f'Status: {report.status}')
 ### Esencial
 - **[¿Qué es AI System?](WHAT_IS_AI_SYSTEM.md)**: Qué es y qué NO es (casos de uso, comparaciones)
 - **[DDS Specification](node_dds/README.md)**: Cómo crear propuestas DDS v2
+- **[ToDo System](node_todo/README.md)**: Gestión de tareas y generación de DDS (NEW v2.2)
 - **[CHANGELOG.md](CHANGELOG.md)**: Historia de versiones
 
 ### Para Desarrolladores
