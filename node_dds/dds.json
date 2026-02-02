@@ -17,161 +17,95 @@
         "content": "Hello from Programmer v1!"
       },
       "created_at": "2026-02-02 11:28:54",
-      "status": "approved",
-      "type": "touch_file",
-      "path": "test_output.txt",
-      "content": "Hello from Programmer v1!"
+      "status": "approved"
     },
     {
       "id": "DDS-TEST-OVERWRITE",
       "project": "test",
       "title": "Test overwrite",
-      "type": "touch_file",
-      "path": "test_output.txt",
-      "content": "UPDATED CONTENT",
-      "status": "approved",
-      "created_at": "2026-02-02 11:30:00"
+      "description": "",
+      "created_at": "2026-02-02 11:30:00",
+      "status": "approved"
     },
     {
       "id": "DDS-TEST-SUBDIR",
       "project": "test",
       "title": "Test subdir",
-      "type": "touch_file",
-      "path": "outputs/reports/summary.txt",
-      "content": "Nested file content",
-      "status": "approved",
-      "created_at": "2026-02-02 11:31:00"
+      "description": "",
+      "created_at": "2026-02-02 11:31:00",
+      "status": "approved"
     },
     {
       "id": "DDS-TEST-NO-ALLOWED",
       "project": "test",
       "title": "No allowed_paths",
-      "type": "touch_file",
-      "path": "test.txt",
-      "content": "content",
-      "status": "approved",
-      "created_at": "2026-02-02 12:00:00"
+      "description": "",
+      "created_at": "2026-02-02 12:00:00",
+      "status": "approved"
     },
     {
       "id": "DDS-TEST-ALLOWED",
       "project": "test",
       "title": "With allowed_paths",
-      "type": "touch_file",
-      "path": "allowed/output.txt",
-      "content": "DDS v1 enforcement working",
-      "allowed_paths": [
-        "allowed/"
-      ],
-      "status": "approved",
-      "created_at": "2026-02-02 12:01:00"
+      "description": "",
+      "created_at": "2026-02-02 12:01:00",
+      "status": "approved"
     },
     {
       "id": "DDS-TEST-WRONG-SCOPE",
       "project": "test",
       "title": "Wrong scope",
-      "type": "touch_file",
-      "path": "forbidden/data.txt",
-      "content": "should not write",
-      "allowed_paths": [
-        "allowed/"
-      ],
-      "status": "approved",
-      "created_at": "2026-02-02 12:02:00"
+      "description": "",
+      "created_at": "2026-02-02 12:02:00",
+      "status": "approved"
     },
     {
       "id": "DDS-TEST-NOOP-V1",
       "project": "test",
       "title": "Noop v1",
-      "type": "noop",
-      "allowed_paths": [
-        "."
-      ],
-      "status": "approved",
-      "created_at": "2026-02-02 12:03:00"
+      "description": "",
+      "created_at": "2026-02-02 12:03:00",
+      "status": "approved"
     },
     {
       "id": "DDS-20260202-CODE-001",
-      "version": 2,
-      "type": "code_change",
       "project": "FitnessAi",
-      "goal": "Fix failing login test",
-      "instructions": [
-        "Run failing tests",
-        "Fix the bug causing test_login.py to fail",
-        "Do not refactor unrelated code"
-      ],
-      "allowed_paths": [
-        "src/",
-        "tests/"
-      ],
-      "tool": "aider",
-      "constraints": {
-        "max_files_changed": 5,
-        "no_new_dependencies": true,
-        "no_refactor": true
-      },
-      "status": "approved",
+      "title": "code_change",
+      "description": "",
       "created_at": "2026-02-02T13:00:00Z",
-      "last_execution": {
-        "status": "success",
-        "executed_at": "2026-02-02 12:51:24",
-        "notes": "Execution completed. No files changed."
-      }
+      "status": "approved"
     },
     {
       "id": "DDS-WRONG-TOOL",
-      "version": 2,
-      "type": "code_change",
       "project": "test",
-      "goal": "Test wrong tool",
-      "instructions": [
-        "test"
-      ],
-      "allowed_paths": [
-        "src/"
-      ],
-      "tool": "cursor",
-      "constraints": {},
-      "status": "approved",
-      "created_at": "2026-02-02T13:06:00Z"
+      "title": "code_change",
+      "description": "",
+      "created_at": "2026-02-02T13:06:00Z",
+      "status": "approved"
     },
     {
       "id": "DDS-NONEXISTENT-PROJECT",
-      "version": 2,
-      "type": "code_change",
       "project": "NonExistentProject",
-      "goal": "Test missing project",
-      "instructions": [
-        "test"
-      ],
-      "allowed_paths": [
-        "src/"
-      ],
-      "tool": "aider",
-      "constraints": {
-        "max_files": 5
-      },
-      "status": "approved",
-      "created_at": "2026-02-02T13:10:00Z"
+      "title": "code_change",
+      "description": "",
+      "created_at": "2026-02-02T13:10:00Z",
+      "status": "approved"
     },
     {
       "id": "DDS-TRAVERSAL",
-      "version": 2,
-      "type": "code_change",
       "project": "FitnessAi",
-      "goal": "Test traversal",
-      "instructions": [
-        "test"
-      ],
-      "allowed_paths": [
-        "../../../tmp_outside/"
-      ],
-      "tool": "aider",
-      "constraints": {
-        "max_files": 5
-      },
-      "status": "approved",
-      "created_at": "2026-02-02T13:16:00Z"
+      "title": "code_change",
+      "description": "",
+      "created_at": "2026-02-02T13:16:00Z",
+      "status": "approved"
+    },
+    {
+      "id": "DDS-GEN-20260202-153144",
+      "project": "ai_system",
+      "title": "Test flujo aprobaci\u00f3n: Verificar que el flujo de aprobaci\u00f3n/rechazo funciona correctamente",
+      "description": "['Analizar el objetivo: Test flujo aprobaci\u00f3n', 'Identificar archivos afectados', 'Implementar cambios m\u00ednimos necesarios', 'Validar que no se rompen tests existentes']",
+      "created_at": "2026-02-02T15:31:44.449162",
+      "status": "approved"
     }
   ]
 }

@@ -127,7 +127,7 @@ class TodoRegistry:
         data['todos'].append(todo)
         self._save_todos(data)
         
-        return todo_id
+        return todo
     
     def list_todos(self, status: Optional[str] = None) -> List[Dict]:
         """
@@ -148,7 +148,7 @@ class TodoRegistry:
         
         return todos
     
-    def get_todo_by_id(self, todo_id: str) -> Optional[Dict]:
+    def get_todo(self, todo_id: str) -> Optional[Dict]:
         """
         Obtiene un ToDo por su ID.
         
@@ -165,6 +165,10 @@ class TodoRegistry:
                 return todo
         
         return None
+    
+    def get_todo_by_id(self, todo_id: str) -> Optional[Dict]:
+        """Alias for backwards compatibility"""
+        return self.get_todo(todo_id)
     
     def update_status(self, todo_id: str, new_status: str) -> bool:
         """

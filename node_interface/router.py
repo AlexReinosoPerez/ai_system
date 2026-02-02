@@ -12,6 +12,7 @@ from node_dds.dds_registry import DDSRegistry, DDSRegistryError
 from node_dds.dds_proposal import DDSProposal
 from node_programmer.programmer import Programmer, ProgrammerError
 from node_programmer.execution_report import ExecutionReport
+from node_todo import TodoRegistry, TodoToDDSConverter
 from datetime import datetime
 
 logger = setup_logger(__name__)
@@ -29,6 +30,8 @@ class Router:
         self._project_status = None
         self._dds_registry = None
         self._programmer = None
+        self._todo_registry = None
+        self._todo_converter = None
     
     def get_system_status(self) -> str:
         """
@@ -390,6 +393,177 @@ class Router:
         except ProgrammerError as e:
             logger.error(f"Status query error: {e}")
             return "❌ Error consultando estado de ejecuciones"
+    
+    def todo_list(self) -> str:
+        """
+        Lista todos los ToDos registrados
+        
+        Returns:
+            Texto formateado con los ToDos
+        """
+        try:
+            if self._todo_registry is None:
+                self._todo_registry = TodoRegistry()
+            
+            todos = self._todo_registry.list_todos()
+            
+            if not todos:
+                return "📝 No hay ToDos registrados"
+            
+            lines = ["📝 Lista de ToDos\n"]
+            for todo in todos:
+                priority_icon = "🔴" if todo['priority'] == 'high' else "🟡" if todo['priority'] == 'medium' else "🟢"
+                status_icon = "🔓" if todo['status'] == 'open' else "🔄" if todo['status'] == 'converted' else "✅"
+                
+                lines.append(
+                    f"{status_icon} {todo['id']}\n"
+                    f"   {priority_icon} {todo['title']}\n"
+                    f"   Proyecto: {todo['project']}\n"
+                )
+            
+            return "\n".join(lines)
+            
+        except Exception as e:
+            logger.error(f"Error listing todos: {e}")
+            return "❌ Error listando ToDos"
+    
+    def todo_to_dds(self, todo_id: str) -> str:
+        """
+        Convierte un ToDo en una propuesta DDS
+        
+        Args:
+            todo_id: ID del ToDo a convertir
+        
+        Returns:
+            Resumen legible de la propuesta DDS generada
+        """
+        try:
+            if self._todo_registry is None:
+                self._todo_registry = TodoRegistry()
+            if self._todo_converter is None:
+                self._todo_converter = TodoToDDSConverter()
+            
+            todo = self._todo_registry.get_todo(todo_id)
+            if not todo:
+                return f"❌ ToDo no encontrado: {todo_id}"
+            
+            dds = self._todo_converter.generate_dds(todo)
+            
+            return (
+                f"🧾 Propuesta DDS Generada\n\n"
+                f"📋 DDS ID: {dds['id']}\n"
+                f"📦 Proyecto: {dds['project']}\n"
+                f"🎯 Objetivo: {dds['goal']}\n"
+                f"📝 Instrucciones: {len(dds['instructions'])} pasos\n"
+                f"📂 Paths permitidos: {', '.join(dds['allowed_paths'])}\n"
+                f"🔧 Herramienta: {dds['tool']}\n"
+                f"⚙️ Constraints:\n"
+                f"   • Max files: {dds['constraints']['max_files_changed']}\n"
+                f"   • No deps: {dds['constraints']['no_new_dependencies']}\n"
+                f"   • No refactor: {dds['constraints']['no_refactor']}\n"
+                f"📊 Estado: {dds['status']}\n"
+                f"🔗 Origen: {dds['source_todo']}\n\n"
+                f"⚠️ Nota: Esta es una PROPUESTA. No se ha ejecutado ni guardado."
+            )
+            
+        except ValueError as e:
+            logger.error(f"Invalid todo: {e}")
+            return f"❌ ToDo inválido: {e}"
+        except Exception as e:
+            logger.error(f"Error converting todo to dds: {e}")
+            return "❌ Error generando propuesta DDS"
+    
+    def dds_list_proposed(self) -> str:
+        """
+        Lista DDS con status='proposed'
+        
+        Returns:
+            Texto formateado con DDS propuestos
+        """
+        try:
+            if self._dds_registry is None:
+                self._dds_registry = DDSRegistry()
+            
+            proposed = self._dds_registry.list_proposed()
+            
+            if not proposed:
+                return "🧾 No hay DDS propuestos pendientes de revisión"
+            
+            lines = ["🧾 DDS Propuestos\n"]
+            for dds in proposed:
+                lines.append(
+                    f"📋 {dds.id}\n"
+                    f"   📦 Proyecto: {dds.project}\n"
+                    f"   🎯 Título: {dds.title}\n"
+                    f"   📊 Estado: {dds.status}\n"
+                )
+            
+            return "\n".join(lines)
+            
+        except DDSRegistryError as e:
+            logger.error(f"Error listing proposed DDS: {e}")
+            return "❌ Error listando DDS propuestos"
+    
+    def dds_approve(self, dds_id: str) -> str:
+        """
+        Aprueba un DDS propuesto
+        
+        Args:
+            dds_id: ID del DDS a aprobar
+        
+        Returns:
+            Mensaje de confirmación o error
+        """
+        try:
+            if self._dds_registry is None:
+                self._dds_registry = DDSRegistry()
+            
+            success = self._dds_registry.approve(dds_id)
+            
+            if success:
+                return (
+                    f"✅ DDS Aprobado\n\n"
+                    f"📋 ID: {dds_id}\n"
+                    f"📊 Nuevo estado: approved\n\n"
+                    f"⚠️ Nota: El DDS ha sido aprobado pero NO se ha ejecutado.\n"
+                    f"Usa /execute {dds_id} para ejecutarlo."
+                )
+            else:
+                return f"❌ DDS no encontrado: {dds_id}"
+            
+        except DDSRegistryError as e:
+            logger.error(f"Error approving DDS: {e}")
+            return "❌ Error aprobando DDS"
+    
+    def dds_reject(self, dds_id: str) -> str:
+        """
+        Rechaza un DDS propuesto
+        
+        Args:
+            dds_id: ID del DDS a rechazar
+        
+        Returns:
+            Mensaje de confirmación o error
+        """
+        try:
+            if self._dds_registry is None:
+                self._dds_registry = DDSRegistry()
+            
+            success = self._dds_registry.reject(dds_id)
+            
+            if success:
+                return (
+                    f"❌ DDS Rechazado\n\n"
+                    f"📋 ID: {dds_id}\n"
+                    f"📊 Nuevo estado: rejected\n\n"
+                    f"Este DDS no podrá ser ejecutado."
+                )
+            else:
+                return f"❌ DDS no encontrado: {dds_id}"
+            
+        except DDSRegistryError as e:
+            logger.error(f"Error rejecting DDS: {e}")
+            return "❌ Error rechazando DDS"
 
 
 router = Router()

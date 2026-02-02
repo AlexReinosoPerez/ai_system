@@ -8,6 +8,87 @@
       "priority": "high",
       "status": "converted",
       "created_at": "2026-02-02T13:50:30.439965"
+    },
+    {
+      "id": "TODO-20260202-150427",
+      "project": "test_project",
+      "title": "Test ToDo v0",
+      "description": "Verificar que TodoRegistry funciona correctamente",
+      "priority": "high",
+      "status": "open",
+      "created_at": "2026-02-02T15:04:27.055881"
+    },
+    {
+      "id": "TODO-20260202-150557",
+      "project": "test_project",
+      "title": "Test ToDo v0",
+      "description": "Verificar que TodoRegistry funciona correctamente",
+      "priority": "high",
+      "status": "open",
+      "created_at": "2026-02-02T15:05:57.241192"
+    },
+    {
+      "id": "TODO-20260202-150624",
+      "project": "ai_system",
+      "title": "Implementaci\u00f3n v0 completa",
+      "description": "Verificar que TodoRegistry cumple con especificaci\u00f3n v0",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-02-02T15:06:24.436685"
+    },
+    {
+      "id": "TODO-20260202-151217",
+      "project": "ai_system",
+      "title": "A\u00f1adir logging al Programmer",
+      "description": "Cada fase del pipeline debe escribir logs estructurados",
+      "priority": "medium",
+      "status": "open",
+      "created_at": "2026-02-02T15:12:17.397136"
+    },
+    {
+      "id": "TODO-20260202-151238",
+      "project": "ai_system",
+      "title": "A\u00f1adir validaci\u00f3n de constraints",
+      "description": "El Programmer debe validar max_files y no_refactor en fase 7",
+      "priority": "high",
+      "status": "open",
+      "created_at": "2026-02-02T15:12:38.025222"
+    },
+    {
+      "id": "TODO-20260202-152002",
+      "project": "ai_system",
+      "title": "Test integraci\u00f3n Telegram",
+      "description": "Verificar que los comandos /todo_list y /todo_to_dds funcionan",
+      "priority": "high",
+      "status": "open",
+      "created_at": "2026-02-02T15:20:02.378637"
+    },
+    {
+      "id": "TODO-20260202-153058",
+      "project": "ai_system",
+      "title": "Test flujo aprobaci\u00f3n",
+      "description": "Verificar que el flujo de aprobaci\u00f3n/rechazo funciona correctamente",
+      "priority": "high",
+      "status": "open",
+      "created_at": "2026-02-02T15:30:58.023543"
+    },
+    {
+      "id": "TODO-20260202-153118",
+      "project": "ai_system",
+      "title": "Test flujo aprobaci\u00f3n",
+      "description": "Verificar que el flujo de aprobaci\u00f3n/rechazo funciona correctamente",
+      "priority": "high",
+      "status": "open",
+      "created_at": "2026-02-02T15:31:18.242805"
+    },
+    {
+      "id": "TODO-20260202-153144",
+      "project": "ai_system",
+      "title": "Test flujo aprobaci\u00f3n",
+      "description": "Verificar que el flujo de aprobaci\u00f3n/rechazo funciona correctamente",
+      "priority": "high",
+      "status": "open",
+      "created_at": "2026-02-02T15:31:44.447945"
     }
   ]
 }

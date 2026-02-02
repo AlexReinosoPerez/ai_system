@@ -40,24 +40,26 @@ class TodoToDDSConverter:
         
         # Generar estructura DDS v2 exacta según especificación
         dds = {
-            "id": f"DDS-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+            "id": f"DDS-GEN-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
             "version": 2,
             "type": "code_change",
             "project": todo["project"],
-            "goal": todo["title"],
-            "instructions": [todo["description"]],
-            "allowed_paths": ["src/", "tests/"],  # Valores por defecto
+            "goal": f"{todo['title']}: {todo['description']}",
+            "instructions": [
+                f"Analizar el objetivo: {todo['title']}",
+                "Identificar archivos afectados",
+                "Implementar cambios mínimos necesarios",
+                "Validar que no se rompen tests existentes"
+            ],
+            "allowed_paths": ["src/", "tests/"],
             "tool": "aider",
             "constraints": {
-                "max_files_changed": 5,       # Conservador
-                "no_new_dependencies": True,  # Conservador
-                "no_refactor": True           # Conservador
+                "max_files_changed": 5,
+                "no_new_dependencies": True,
+                "no_refactor": True
             },
-            "status": "proposed",  # NUNCA "approved"
-            "metadata": {
-                "source_todo": todo["id"],
-                "generated_at": datetime.now().isoformat()
-            }
+            "status": "proposed",
+            "source_todo": todo["id"]
         }
         
         # Retornar dict (NO escribir en archivos externos)

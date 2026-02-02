@@ -75,6 +75,16 @@ class DDSRegistry:
         """
         return self._load_proposals()
     
+    def list_proposed(self) -> List[DDSProposal]:
+        """
+        List proposals with status='proposed'
+        
+        Returns:
+            List of proposed DDSs
+        """
+        proposals = self._load_proposals()
+        return [p for p in proposals if p.status == 'proposed']
+    
     def add_proposal(self, proposal: DDSProposal):
         """
         Add new proposal

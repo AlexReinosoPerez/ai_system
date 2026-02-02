@@ -32,9 +32,9 @@ class DDSProposal:
         """Create proposal from dictionary"""
         return DDSProposal(
             id=data['id'],
-            project=data['project'],
-            title=data['title'],
-            description=data['description'],
-            created_at=data['created_at'],
-            status=data['status']
+            project=data.get('project', 'unknown'),
+            title=data.get('title', data.get('type', 'untitled')),
+            description=data.get('description', ''),
+            created_at=data.get('created_at', ''),
+            status=data.get('status', 'unknown')
         )

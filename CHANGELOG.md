@@ -5,7 +5,114 @@ All notable changes to AI System will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.2.0] - 2026-02-02
+## [1.0.0] - 2026-02-02
+
+### Added
+
+#### Core System
+- **Decision-Driven System (DDS v2)**: Structured proposals for code changes
+  - DDS v2 schema with version, type, project, goal, instructions, allowed_paths, tool, constraints, status
+  - DDS states: proposed → approved/rejected → executed/failed
+  - Persistence in `node_dds/dds.json`
+  - Full validation and constraint checking
+
+#### ToDo Management
+- **node_todo/TodoRegistry**: Human intent tracking
+  - CRUD operations for tasks
+  - States: open, converted, closed
+  - Persistence in `node_todo/todo.json`
+  - Priority levels: low, medium, high
+
+- **node_todo/TodoToDDSConverter**: ToDo → DDS proposal translation
+  - Deterministic conversion (no AI)
+  - Conservative defaults for constraints
+  - Generated DDS always have `status="proposed"`
+  - Source tracking with `source_todo` field
+
+#### Telegram Interface
+- **Commands**:
+  - `/todo_list`: List all ToDos
+  - `/todo_to_dds <TODO-ID>`: Generate DDS proposal from ToDo
+  - `/dds_list_proposed`: List proposed DDS awaiting review
+  - `/dds_approve <DDS-ID>`: Approve DDS for execution
+  - `/dds_reject <DDS-ID>`: Reject DDS
+  - `/execute <DDS-ID>`: Execute approved DDS
+  - `/exec_status`: Check last execution status
+
+#### Programmer v2.1
+- **8-phase execution pipeline**:
+  1. Structure and isolation
+  2. DDS v2 validation
+  3. Ephemeral workspace creation
+  4. Scoped workspace (allowed_paths only)
+  5. Controlled prompt construction
+  6. External tool invocation (Aider)
+  7. Post-execution analysis (snapshot, changes, constraints)
+  8. Persistence and closure (reports.json, dds.json)
+
+- **Security features**:
+  - Isolated workspaces per execution
+  - Path traversal prevention
+  - No automatic commits (--no-auto-commit flag)
+  - Constraint validation (max_files, no_new_dependencies, no_refactor)
+  - MD5 snapshot before/after
+  - Change detection
+
+- **Aider integration**: Real code changes via subprocess
+
+#### Scheduler
+- **node_scheduler/Scheduler**: Automated execution of approved DDS
+  - Sequential processing (one DDS at a time)
+  - Stop-on-failure semantics
+  - State transitions: approved → executed/failed
+  - Suitable for cron jobs
+
+#### Documentation
+- **Framework reorganization**: Moved development framework to `docs/framework/`
+  - `docs/framework/contract_system/`: Development methodology
+  - `docs/framework/philosophy.md`: Design principles
+  - README.md now focuses 100% on runtime components
+
+- **Comprehensive documentation**:
+  - README.md: System overview and usage
+  - WHAT_IS_AI_SYSTEM.md: What it is and what it isn't
+  - ARCHITECTURE.md: System diagrams and flows
+  - node_programmer/README.md: Programmer pipeline details
+  - node_dds/README.md: DDS specification
+  - node_todo/README.md: ToDo system documentation
+  - node_scheduler/README.md: Scheduler usage
+
+### Guarantees
+
+✅ **No execution without human approval**: All DDS must be explicitly approved  
+✅ **No automatic commits**: Code changes never auto-commit  
+✅ **Isolated workspaces**: Each execution in separate workspace copy  
+✅ **Sequential execution**: No parallel execution of DDS  
+✅ **Stop-on-failure**: Scheduler stops on first error  
+✅ **Full traceability**: Complete audit trail in reports.json  
+✅ **Path validation**: No path traversal attacks  
+✅ **Constraint enforcement**: Configurable limits enforced  
+
+### Known Limitations
+
+⚠️ **No rollback**: Failed executions require manual cleanup  
+⚠️ **No parallel execution**: One DDS at a time only  
+⚠️ **No autonomous planning**: AI doesn't decide what to build  
+⚠️ **Heuristic constraints**: Validation based on heuristics, not AST  
+⚠️ **No containerization**: Executes in same environment (not sandboxed)  
+⚠️ **No rate limiting**: No limits on concurrent executions (v1.0)  
+
+### Technical Stack
+
+- **Language**: Python 3.10+
+- **Dependencies**: Standard library only for core components
+- **External tools**: Aider (optional, for real code execution)
+- **Interfaces**: Telegram Bot API
+- **Storage**: JSON files (todos.json, dds.json, reports.json)
+
+---
+
+## [2.2.0] - 2026-02-02 (Pre-release)
 
 ### Added - ToDo System
 

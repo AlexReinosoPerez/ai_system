@@ -37,6 +37,11 @@ class TelegramBot:
         self.app.add_handler(CommandHandler("dds_reject", self.dds_reject_command))
         self.app.add_handler(CommandHandler("execute", self.execute_command))
         self.app.add_handler(CommandHandler("exec_status", self.exec_status_command))
+        self.app.add_handler(CommandHandler("todo_list", self.todo_list_command))
+        self.app.add_handler(CommandHandler("todo_to_dds", self.todo_to_dds_command))
+        self.app.add_handler(CommandHandler("dds_list_proposed", self.dds_list_proposed_command))
+        self.app.add_handler(CommandHandler("dds_approve", self.dds_approve_command))
+        self.app.add_handler(CommandHandler("dds_reject", self.dds_reject_command))
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
@@ -71,6 +76,11 @@ class TelegramBot:
             "/dds_reject <id> - Rechazar propuesta\n"
             "/execute <dds_id> - Ejecutar DDS aprobado\n"
             "/exec_status - Ver última ejecución\n"
+            "/todo_list - Listar todos los ToDos\n"
+            "/todo_to_dds <todo_id> - Generar DDS desde ToDo\n"
+            "/dds_list_proposed - Listar DDS propuestos\n"
+            "/dds_approve <dds_id> - Aprobar DDS propuesto\n"
+            "/dds_reject <dds_id> - Rechazar DDS propuesto\n"
             "/help - Mostrar esta ayuda"
         )
         await update.message.reply_text(help_text)
@@ -222,6 +232,63 @@ class TelegramBot:
         """Handle /exec_status command"""
         logger.info(f"Command /exec_status received from user {update.effective_user.id}")
         result = router.exec_status()
+        await update.message.reply_text(result)
+    
+    async def todo_list_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /todo_list command"""
+        logger.info(f"Command /todo_list received from user {update.effective_user.id}")
+        result = router.todo_list()
+        await update.message.reply_text(result)
+    
+    async def todo_to_dds_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /todo_to_dds command"""
+        logger.info(f"Command /todo_to_dds received from user {update.effective_user.id}")
+        
+        if not context.args:
+            await update.message.reply_text(
+                "⚠️ Uso: /todo_to_dds <TODO-ID>\n\n"
+                "Ejemplo: /todo_to_dds TODO-20260202-001"
+            )
+            return
+        
+        todo_id = context.args[0]
+        result = router.todo_to_dds(todo_id)
+        await update.message.reply_text(result)
+    
+    async def dds_list_proposed_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /dds_list_proposed command"""
+        logger.info(f"Command /dds_list_proposed received from user {update.effective_user.id}")
+        result = router.dds_list_proposed()
+        await update.message.reply_text(result)
+    
+    async def dds_approve_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /dds_approve command"""
+        logger.info(f"Command /dds_approve received from user {update.effective_user.id}")
+        
+        if not context.args:
+            await update.message.reply_text(
+                "⚠️ Uso: /dds_approve <DDS-ID>\n\n"
+                "Ejemplo: /dds_approve DDS-GEN-20260202-150000"
+            )
+            return
+        
+        dds_id = context.args[0]
+        result = router.dds_approve(dds_id)
+        await update.message.reply_text(result)
+    
+    async def dds_reject_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /dds_reject command"""
+        logger.info(f"Command /dds_reject received from user {update.effective_user.id}")
+        
+        if not context.args:
+            await update.message.reply_text(
+                "⚠️ Uso: /dds_reject <DDS-ID>\n\n"
+                "Ejemplo: /dds_reject DDS-GEN-20260202-150000"
+            )
+            return
+        
+        dds_id = context.args[0]
+        result = router.dds_reject(dds_id)
         await update.message.reply_text(result)
     
     def run(self):
