@@ -26,6 +26,7 @@ class TelegramBot:
         self.app.add_handler(CommandHandler("start", self.start_command))
         self.app.add_handler(CommandHandler("status", self.status_command))
         self.app.add_handler(CommandHandler("help", self.help_command))
+        self.app.add_handler(CommandHandler("project", self.project_command))
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
@@ -49,9 +50,25 @@ class TelegramBot:
             "📋 Comandos disponibles:\n\n"
             "/start - Iniciar el bot\n"
             "/status - Ver estado del sistema\n"
+            "/project <nombre> - Ver info de proyecto\n"
             "/help - Mostrar esta ayuda"
         )
         await update.message.reply_text(help_text)
+    
+    async def project_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /project command"""
+        logger.info(f"Command /project received from user {update.effective_user.id}")
+        
+        if not context.args:
+            await update.message.reply_text(
+                "⚠️ Uso: /project <nombre>\n\n"
+                "Ejemplo: /project fitnessai"
+            )
+            return
+        
+        project_name = context.args[0]
+        result = router.project(project_name)
+        await update.message.reply_text(result)
     
     def run(self):
         """Start the bot"""
