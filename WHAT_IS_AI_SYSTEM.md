@@ -65,7 +65,7 @@ Actualmente soporta Aider, diseñado para soportar múltiples herramientas.
 
 **Por qué**: Es runtime de ejecución, no tooling de desarrollo.
 
-**Nota**: `claude_system/` es un framework de desarrollo, pero es interno/opcional, no parte del runtime.
+**Nota**: El framework de desarrollo está en `docs/framework/`, pero es interno/opcional, no parte del runtime.
 
 ### 4. NO es un Sistema de CI/CD
 - ❌ No ejecuta tests automáticamente

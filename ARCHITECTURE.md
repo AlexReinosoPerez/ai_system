@@ -390,9 +390,9 @@ ai_system/
 │   ├── telegram_bot.py           # Telegram interface
 │   └── router.py                 # Command routing
 │
-├── claude_system/
-│   ├── prompts/                  # AI role prompts
-│   └── docs/                     # System documentation
+├── docs/framework/               # Development framework (dev-only)
+│   ├── contract_system/          # AI role prompts & workflow
+│   └── philosophy.md             # Design principles
 │
 ├── audits/                       # Audit logs
 ├── README.md                     # Main documentation

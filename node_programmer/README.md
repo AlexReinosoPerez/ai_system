@@ -558,7 +558,7 @@ print(f"Code changes: {actions['code_change']}")
 
 - [Aider Documentation](https://aider.chat/)
 - [DDS v2 Specification](../node_dds/README.md)
-- [Claude System](../claude_system/README.md)
+- [Development Framework](../docs/framework/)
 
 ## 🤝 Contribución
 

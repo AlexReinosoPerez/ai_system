@@ -67,16 +67,6 @@ Ejecutar cambios de código asistidos por IA de forma **controlada, auditable y 
 
 - **`audits/`**: Logs y auditorías del sistema
 
-> 💡 **Filosofía de diseño**: Ver [docs/philosophy.md](docs/philosophy.md) para principios y decisiones arquitectónicas.
-
-### Development-Only Components
-
-- **`claude_system/`**: **(Development-only)** Framework interno para el desarrollo asistido por IA.
-  - Define roles, prompts y workflow de trabajo
-  - **NO es necesario para ejecutar ai_system en producción**
-  - Usado únicamente durante el desarrollo del propio repositorio
-  - Ver [claude_system/README.md](claude_system/README.md) para metodología de desarrollo
-
 ## 🚀 Programmer v2.1 - Pipeline de Ejecución
 
 ### Fases del Pipeline
@@ -277,12 +267,7 @@ print(f'Status: {report.status}')
 ### Para Desarrolladores
 - **[Programmer Architecture](node_programmer/README.md)**: Pipeline de ejecución detallado
 - **[ARCHITECTURE.md](ARCHITECTURE.md)**: Diagramas y flujos del sistema
-- **[Core Philosophy](docs/philosophy.md)**: Principios de diseño y decisiones arquitectónicas
-
-### Development Framework (Interno)
-- **[claude_system/](claude_system/)**: Framework de desarrollo asistido por IA (development-only)
-  - Metodología de trabajo con prompts y roles
-  - No necesario para ejecutar el runtime en producción
+- **[Development Framework](docs/framework/)**: Framework de desarrollo (development-only)
 
 ## 🔐 Seguridad y Límites
 
@@ -341,11 +326,7 @@ print(f'Status: {report.status}')
 
 ## 🤝 Contribución
 
-Este proyecto usa un framework de desarrollo interno (claude_system/) que define roles y workflow.
-
-Ver [claude_system/README.md](claude_system/README.md) para metodología de desarrollo.
-
-**Nota**: claude_system es tooling interno, no es necesario para usar AI System en producción.
+Ver [docs/framework/](docs/framework/) para metodología de desarrollo y framework interno.
 
 ## 📄 Licencia
 

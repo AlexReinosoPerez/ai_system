@@ -462,7 +462,7 @@ except ProgrammerError as e:
 
 - [Node Programmer Documentation](../node_programmer/README.md)
 - [Aider Documentation](https://aider.chat/)
-- [Claude System](../claude_system/README.md)
+- [Development Framework](../docs/framework/)
 
 ## 🗺️ Roadmap
 
