@@ -145,6 +145,25 @@
       "constraints": {},
       "status": "approved",
       "created_at": "2026-02-02T13:06:00Z"
+    },
+    {
+      "id": "DDS-NONEXISTENT-PROJECT",
+      "version": 2,
+      "type": "code_change",
+      "project": "NonExistentProject",
+      "goal": "Test missing project",
+      "instructions": [
+        "test"
+      ],
+      "allowed_paths": [
+        "src/"
+      ],
+      "tool": "aider",
+      "constraints": {
+        "max_files": 5
+      },
+      "status": "approved",
+      "created_at": "2026-02-02T13:10:00Z"
     }
   ]
 }

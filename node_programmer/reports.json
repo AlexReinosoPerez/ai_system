@@ -1,11 +1,11 @@
 {
   "executions": [
     {
-      "dds_id": "DDS-WRONG-TOOL",
+      "dds_id": "DDS-NONEXISTENT-PROJECT",
       "action_type": "code_change",
       "status": "failed",
-      "executed_at": "2026-02-02 12:08:15",
-      "notes": "Validation failed: Invalid tool: expected 'aider', got cursor"
+      "executed_at": "2026-02-02 12:13:11",
+      "notes": "Execution failed: Project source not found: NonExistentProject"
     }
   ]
 }

@@ -4,6 +4,7 @@ Programmer - DDS execution engine with noop actions
 
 import json
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -23,6 +24,7 @@ class Programmer:
     
     REPORTS_FILE = "node_programmer/reports.json"
     SANDBOX_DIR = "node_programmer/sandbox"
+    WORKSPACES_DIR = "node_programmer/workspaces"
     DDS_FILE = "node_dds/dds.json"
     
     def __init__(self):
@@ -439,23 +441,62 @@ class Programmer:
         try:
             self._validate_dds_v2(dds_found)
             
-            # PHASE 2: Validation only - do not execute
-            executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            # PHASE 3: Create ephemeral workspace
+            project = dds_found.get('project')
+            workspace_path = Path(self.WORKSPACES_DIR) / dds_id
             
-            report = ExecutionReport(
-                dds_id=dds_id,
-                action_type='code_change',
-                status='failed',
-                executed_at=executed_at,
-                notes='DDS v2 validation passed but execution not implemented (PHASE 2)'
-            )
+            # Create workspace directory
+            workspace_path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Created workspace: {workspace_path}")
             
-            self._save_report(report)
-            logger.info(f"DDS v2 validated but not executed: {dds_id}")
-            return report
+            # Determine project source path (assuming projects are in root or specific location)
+            # For this implementation, we'll use a mock project structure
+            # In production, this would map to actual project repositories
+            project_source = Path(project)
+            
+            if not project_source.exists():
+                # Try common locations
+                possible_sources = [
+                    Path(f"../{project}"),
+                    Path(f"../../{project}"),
+                    Path(f"projects/{project}")
+                ]
+                
+                for source in possible_sources:
+                    if source.exists():
+                        project_source = source
+                        break
+            
+            # Copy project files to workspace
+            if project_source.exists() and project_source.is_dir():
+                # Copy contents to workspace
+                for item in project_source.iterdir():
+                    if item.is_dir():
+                        shutil.copytree(item, workspace_path / item.name, dirs_exist_ok=True)
+                    else:
+                        shutil.copy2(item, workspace_path)
+                
+                logger.info(f"Copied project '{project}' to workspace: {workspace_path}")
+                file_count = len(list(workspace_path.rglob('*')))
+                
+                executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+                report = ExecutionReport(
+                    dds_id=dds_id,
+                    action_type='code_change',
+                    status='failed',
+                    executed_at=executed_at,
+                    notes=f'Workspace created successfully at {workspace_path} with {file_count} items. External tool execution not implemented (PHASE 3)'
+                )
+                
+                self._save_report(report)
+                logger.info(f"DDS v2 workspace ready: {dds_id}")
+                return report
+            else:
+                raise ProgrammerError(f"Project source not found: {project}")
             
         except ProgrammerError as e:
-            logger.error(f"DDS v2 validation failed: {e}")
+            logger.error(f"DDS v2 execution failed: {e}")
             
             # Create failure report
             report = ExecutionReport(
@@ -463,11 +504,25 @@ class Programmer:
                 action_type='code_change',
                 status='failed',
                 executed_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                notes=f"Validation failed: {str(e)}"
+                notes=f"Execution failed: {str(e)}"
             )
             
             self._save_report(report)
             raise
+        except Exception as e:
+            logger.error(f"Unexpected error during workspace creation: {e}")
+            
+            # Create failure report
+            report = ExecutionReport(
+                dds_id=dds_id,
+                action_type='code_change',
+                status='failed',
+                executed_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                notes=f"Workspace creation failed: {str(e)}"
+            )
+            
+            self._save_report(report)
+            raise ProgrammerError(f"Workspace creation failed: {str(e)}") from e
     
     def get_last_report(self) -> Optional[ExecutionReport]:
         """
