@@ -1,5 +1,9 @@
 """
 Telegram Bot Interface for AI System
+
+This interface communicates with the system ONLY through the Router Contract.
+It constructs ContractRequest objects and displays ContractResponse messages.
+It never calls Router methods directly.
 """
 
 from telegram import Update
@@ -8,19 +12,34 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 from shared.config import config
 from shared.logger import setup_logger
 from node_interface.router import router
+from node_interface.contract import Action, ContractRequest
 
 logger = setup_logger(__name__, level=config.LOG_LEVEL)
 
 
+def _make_request(
+    action: Action,
+    payload: dict = None,
+    user_id: str = "unknown",
+) -> ContractRequest:
+    """Build a ContractRequest for dispatch to the Router."""
+    return ContractRequest(
+        action=action,
+        payload=payload or {},
+        source="telegram",
+        user_id=str(user_id),
+    )
+
+
 class TelegramBot:
-    """Telegram Bot handler"""
-    
+    """Telegram Bot handler — all commands go through Router Contract"""
+
     def __init__(self):
         """Initialize the bot"""
         config.validate()
         self.app = Application.builder().token(config.TELEGRAM_BOT_TOKEN).build()
         self._setup_handlers()
-    
+
     def _setup_handlers(self):
         """Setup command handlers"""
         self.app.add_handler(CommandHandler("start", self.start_command))
@@ -40,9 +59,12 @@ class TelegramBot:
         self.app.add_handler(CommandHandler("todo_list", self.todo_list_command))
         self.app.add_handler(CommandHandler("todo_to_dds", self.todo_to_dds_command))
         self.app.add_handler(CommandHandler("dds_list_proposed", self.dds_list_proposed_command))
-        self.app.add_handler(CommandHandler("dds_approve", self.dds_approve_command))
-        self.app.add_handler(CommandHandler("dds_reject", self.dds_reject_command))
-    
+
+    # ──────────────────────────────────────────────
+    # LOCAL-ONLY commands (not routed through contract)
+    # These are pure UI concerns with no system interaction.
+    # ──────────────────────────────────────────────
+
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
         logger.info(f"Command /start received from user {update.effective_user.id}")
@@ -51,13 +73,7 @@ class TelegramBot:
             "Sistema modular de inteligencia artificial.\n\n"
             "Usa /help para ver los comandos disponibles."
         )
-    
-    async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle /status command"""
-        logger.info(f"Command /status received from user {update.effective_user.id}")
-        status = router.get_system_status()
-        await update.message.reply_text(status)
-    
+
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
         logger.info(f"Command /help received from user {update.effective_user.id}")
@@ -79,46 +95,64 @@ class TelegramBot:
             "/todo_list - Listar todos los ToDos\n"
             "/todo_to_dds <todo_id> - Generar DDS desde ToDo\n"
             "/dds_list_proposed - Listar DDS propuestos\n"
-            "/dds_approve <dds_id> - Aprobar DDS propuesto\n"
-            "/dds_reject <dds_id> - Rechazar DDS propuesto\n"
             "/help - Mostrar esta ayuda"
         )
         await update.message.reply_text(help_text)
-    
+
+    # ──────────────────────────────────────────────
+    # CONTRACT-ROUTED commands
+    # Each handler builds a ContractRequest → dispatches → shows response.message
+    # ──────────────────────────────────────────────
+
+    async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /status command"""
+        logger.info(f"Command /status received from user {update.effective_user.id}")
+        request = _make_request(Action.SYSTEM_STATUS, user_id=update.effective_user.id)
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def project_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /project command"""
         logger.info(f"Command /project received from user {update.effective_user.id}")
-        
+
         if not context.args:
             await update.message.reply_text(
                 "⚠️ Uso: /project <nombre>\n\n"
                 "Ejemplo: /project fitnessai"
             )
             return
-        
-        project_name = context.args[0]
-        result = router.project(project_name)
-        await update.message.reply_text(result)
-    
+
+        request = _make_request(
+            Action.PROJECT_INFO,
+            payload={"name": context.args[0]},
+            user_id=update.effective_user.id,
+        )
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def project_summary_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /project_summary command"""
         logger.info(f"Command /project_summary received from user {update.effective_user.id}")
-        
+
         if not context.args:
             await update.message.reply_text(
                 "⚠️ Uso: /project_summary <nombre>\n\n"
                 "Ejemplo: /project_summary fitnessai"
             )
             return
-        
-        project_name = context.args[0]
-        result = router.project_summary(project_name)
-        await update.message.reply_text(result)
-    
+
+        request = _make_request(
+            Action.PROJECT_SUMMARY,
+            payload={"name": context.args[0]},
+            user_id=update.effective_user.id,
+        )
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def inbox_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /inbox command"""
         logger.info(f"Command /inbox received from user {update.effective_user.id}")
-        
+
         count = 10
         if context.args:
             try:
@@ -134,163 +168,168 @@ class TelegramBot:
                     "Ejemplo: /inbox 20"
                 )
                 return
-        
-        result = router.inbox(count)
-        await update.message.reply_text(result)
-    
+
+        request = _make_request(
+            Action.INBOX,
+            payload={"count": count},
+            user_id=update.effective_user.id,
+        )
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def projects_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /projects command"""
         logger.info(f"Command /projects received from user {update.effective_user.id}")
-        result = router.projects()
-        await update.message.reply_text(result)
-    
+        request = _make_request(Action.PROJECT_LIST, user_id=update.effective_user.id)
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def project_status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /project_status command"""
         logger.info(f"Command /project_status received from user {update.effective_user.id}")
-        
+
         if not context.args:
             await update.message.reply_text(
                 "⚠️ Uso: /project_status <nombre>\n\n"
                 "Ejemplo: /project_status fitnessai"
             )
             return
-        
-        project_name = context.args[0]
-        result = router.project_status(project_name)
-        await update.message.reply_text(result)
-    
+
+        request = _make_request(
+            Action.PROJECT_STATUS,
+            payload={"name": context.args[0]},
+            user_id=update.effective_user.id,
+        )
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def dds_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /dds command"""
         logger.info(f"Command /dds received from user {update.effective_user.id}")
-        result = router.dds_list()
-        await update.message.reply_text(result)
-    
+        request = _make_request(Action.DDS_LIST, user_id=update.effective_user.id)
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def dds_new_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /dds_new command"""
         logger.info(f"Command /dds_new received from user {update.effective_user.id}")
-        
+
         if len(context.args) < 3:
             await update.message.reply_text(
                 "⚠️ Uso: /dds_new <proyecto> <título> <descripción>\n\n"
                 "Ejemplo: /dds_new fitnessai \"Nueva feature\" \"Descripción detallada\""
             )
             return
-        
-        project = context.args[0]
-        title = context.args[1]
-        description = ' '.join(context.args[2:])
-        
-        result = router.dds_new(project, title, description)
-        await update.message.reply_text(result)
-    
+
+        request = _make_request(
+            Action.DDS_NEW,
+            payload={
+                "project": context.args[0],
+                "title": context.args[1],
+                "description": " ".join(context.args[2:]),
+            },
+            user_id=update.effective_user.id,
+        )
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def dds_approve_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /dds_approve command"""
         logger.info(f"Command /dds_approve received from user {update.effective_user.id}")
-        
+
         if not context.args:
             await update.message.reply_text(
                 "⚠️ Uso: /dds_approve <id>\n\n"
                 "Ejemplo: /dds_approve DDS-20260202123456"
             )
             return
-        
-        proposal_id = context.args[0]
-        result = router.dds_approve(proposal_id)
-        await update.message.reply_text(result)
-    
+
+        request = _make_request(
+            Action.DDS_APPROVE,
+            payload={"proposal_id": context.args[0]},
+            user_id=update.effective_user.id,
+        )
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def dds_reject_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /dds_reject command"""
         logger.info(f"Command /dds_reject received from user {update.effective_user.id}")
-        
+
         if not context.args:
             await update.message.reply_text(
                 "⚠️ Uso: /dds_reject <id>\n\n"
                 "Ejemplo: /dds_reject DDS-20260202123456"
             )
             return
-        
-        proposal_id = context.args[0]
-        result = router.dds_reject(proposal_id)
-        await update.message.reply_text(result)
-    
+
+        request = _make_request(
+            Action.DDS_REJECT,
+            payload={"proposal_id": context.args[0]},
+            user_id=update.effective_user.id,
+        )
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def execute_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /execute command"""
         logger.info(f"Command /execute received from user {update.effective_user.id}")
-        
+
         if not context.args:
             await update.message.reply_text(
                 "⚠️ Uso: /execute <dds_id>\n\n"
                 "Ejemplo: /execute DDS-20260202123456"
             )
             return
-        
-        dds_id = context.args[0]
-        result = router.execute(dds_id)
-        await update.message.reply_text(result)
-    
+
+        request = _make_request(
+            Action.EXECUTE,
+            payload={"dds_id": context.args[0]},
+            user_id=update.effective_user.id,
+        )
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def exec_status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /exec_status command"""
         logger.info(f"Command /exec_status received from user {update.effective_user.id}")
-        result = router.exec_status()
-        await update.message.reply_text(result)
-    
+        request = _make_request(Action.EXEC_STATUS, user_id=update.effective_user.id)
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def todo_list_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /todo_list command"""
         logger.info(f"Command /todo_list received from user {update.effective_user.id}")
-        result = router.todo_list()
-        await update.message.reply_text(result)
-    
+        request = _make_request(Action.TODO_LIST, user_id=update.effective_user.id)
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def todo_to_dds_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /todo_to_dds command"""
         logger.info(f"Command /todo_to_dds received from user {update.effective_user.id}")
-        
+
         if not context.args:
             await update.message.reply_text(
                 "⚠️ Uso: /todo_to_dds <TODO-ID>\n\n"
                 "Ejemplo: /todo_to_dds TODO-20260202-001"
             )
             return
-        
-        todo_id = context.args[0]
-        result = router.todo_to_dds(todo_id)
-        await update.message.reply_text(result)
-    
+
+        request = _make_request(
+            Action.TODO_TO_DDS,
+            payload={"todo_id": context.args[0]},
+            user_id=update.effective_user.id,
+        )
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     async def dds_list_proposed_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /dds_list_proposed command"""
         logger.info(f"Command /dds_list_proposed received from user {update.effective_user.id}")
-        result = router.dds_list_proposed()
-        await update.message.reply_text(result)
-    
-    async def dds_approve_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle /dds_approve command"""
-        logger.info(f"Command /dds_approve received from user {update.effective_user.id}")
-        
-        if not context.args:
-            await update.message.reply_text(
-                "⚠️ Uso: /dds_approve <DDS-ID>\n\n"
-                "Ejemplo: /dds_approve DDS-GEN-20260202-150000"
-            )
-            return
-        
-        dds_id = context.args[0]
-        result = router.dds_approve(dds_id)
-        await update.message.reply_text(result)
-    
-    async def dds_reject_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle /dds_reject command"""
-        logger.info(f"Command /dds_reject received from user {update.effective_user.id}")
-        
-        if not context.args:
-            await update.message.reply_text(
-                "⚠️ Uso: /dds_reject <DDS-ID>\n\n"
-                "Ejemplo: /dds_reject DDS-GEN-20260202-150000"
-            )
-            return
-        
-        dds_id = context.args[0]
-        result = router.dds_reject(dds_id)
-        await update.message.reply_text(result)
-    
+        request = _make_request(Action.DDS_LIST_PROPOSED, user_id=update.effective_user.id)
+        response = router.dispatch(request)
+        await update.message.reply_text(response.message)
+
     def run(self):
         """Start the bot"""
         logger.info("Starting Telegram Bot with polling...")

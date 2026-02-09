@@ -31,8 +31,8 @@ class FixDDSGenerator:
         Returns:
             Dict with complete code_fix DDS structure
         """
-        # Generate unique ID
-        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+        # Generate unique ID (microseconds to prevent same-second collisions)
+        timestamp = datetime.now().strftime('%Y%m%d-%H%M%S-%f')
         fix_id = f"DDS-FIX-{timestamp}"
         
         # Truncate and sanitize error message

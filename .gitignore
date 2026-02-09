@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Secrets
+secrets/
+.env
+
+# Backups
+*.bak
+
+# Sandbox outputs (test artifacts)
+node_programmer/sandbox/noop_*.txt
+node_programmer/sandbox/outputs/
+
+# Generated fix workspaces (test artifacts)
+node_programmer/workspaces/DDS-FIX-*/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

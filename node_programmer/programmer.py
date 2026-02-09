@@ -415,8 +415,8 @@ class Programmer:
         
         # Validate type
         dds_type = dds.get('type')
-        if dds_type != 'code_change':
-            raise ProgrammerError(f"Invalid type: expected 'code_change', got {dds_type}")
+        if dds_type not in ('code_change', 'code_fix'):
+            raise ProgrammerError(f"Invalid type: expected 'code_change' or 'code_fix', got {dds_type}")
         
         # Validate project
         project = dds.get('project')
@@ -561,11 +561,6 @@ class Programmer:
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             filename = f"noop_{dds_id}_{timestamp}.txt"
             filepath = os.path.join(self.SANDBOX_DIR, filename)
-            
-            # Validate allowed_paths
-            target_path = Path(filepath).resolve()
-            allowed_paths = dds_found.get('allowed_paths')
-            self._validate_allowed_paths(target_path, allowed_paths)
             
             executed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             content = f"DDS {dds_id} executed at {executed_at}"

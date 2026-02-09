@@ -29,6 +29,10 @@ class Config:
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     
+    # Authentication — comma-separated list of allowed user IDs
+    # If empty or not set, auth check is DISABLED (development mode)
+    ALLOWED_USER_IDS: str = os.getenv("ALLOWED_USER_IDS", "")
+    
     @classmethod
     def validate(cls) -> bool:
         """Validate required configuration"""
